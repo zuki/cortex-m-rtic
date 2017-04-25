@@ -463,6 +463,9 @@ macro_rules! barrier {
     }
 }
 
+#[cfg(not(thumbv6m))]
+pub mod checked;
+
 /// Task local data
 ///
 /// This data can only be accessed by the task `T`
