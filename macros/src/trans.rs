@@ -39,21 +39,9 @@ fn idle(
     main: &mut Vec<Tokens>,
     root: &mut Vec<Tokens>,
 ) {
-    let krate = krate();
-
     let mut mod_items = vec![];
     let mut tys = vec![];
     let mut exprs = vec![];
-
-    if !app.idle.resources.is_empty() &&
-        !app.idle
-            .resources
-            .iter()
-            .all(|resource| ownerships[resource].is_owned())
-    {
-        tys.push(quote!(&mut #krate::Threshold));
-        exprs.push(quote!(unsafe { &mut #krate::Threshold::new(0) }));
-    }
 
     if !app.idle.locals.is_empty() {
         let mut lexprs = vec![];
@@ -364,19 +352,15 @@ fn resources(app: &App, ownerships: &Ownerships, root: &mut Vec<Tokens>) {
 
                         pub fn claim<R, F>(
                             &self,
-                            t: &mut #krate::Threshold,
                             f: F,
                         ) -> R
                         where
-                            F: FnOnce(
-                                &#krate::Static<#ty>,
-                                &mut #krate::Threshold) -> R
+                            F: FnOnce(&#krate::Static<#ty>) -> R
                         {
                             unsafe {
                                 #name.claim(
                                     #ceiling,
                                     #device::NVIC_PRIO_BITS,
-                                    t,
                                     f,
                                 )
                             }
@@ -384,19 +368,15 @@ fn resources(app: &App, ownerships: &Ownerships, root: &mut Vec<Tokens>) {
 
                         pub fn claim_mut<R, F>(
                             &mut self,
-                            t: &mut #krate::Threshold,
                             f: F,
                         ) -> R
                         where
-                            F: FnOnce(
-                                &mut #krate::Static<#ty>,
-                                &mut #krate::Threshold) -> R
+                            F: FnOnce(&mut #krate::Static<#ty>) -> R
                         {
                             unsafe {
                                 #name.claim_mut(
                                     #ceiling,
                                     #device::NVIC_PRIO_BITS,
-                                    t,
                                     f,
                                 )
                             }
@@ -418,19 +398,15 @@ fn resources(app: &App, ownerships: &Ownerships, root: &mut Vec<Tokens>) {
 
                         pub fn claim<R, F>(
                             &self,
-                            t: &mut #krate::Threshold,
                             f: F,
                         ) -> R
                         where
-                            F: FnOnce(
-                                &#device::#name,
-                                &mut #krate::Threshold) -> R
+                            F: FnOnce(&#device::#name) -> R
                         {
                             unsafe {
                                 #name.claim(
                                     #ceiling,
                                     #device::NVIC_PRIO_BITS,
-                                    t,
                                     f,
                                 )
                             }

@@ -12,12 +12,15 @@ use core::cell::UnsafeCell;
 
 pub use cortex_m_rtfm_macros::app;
 pub use cortex_m::asm::{bkpt, wfi};
-pub use cortex_m::interrupt::CriticalSection;
+pub use cortex_m::interrupt::{self, CriticalSection};
 pub use cortex_m::interrupt::free as atomic;
+#[doc(hidden)]
+pub use cortex_m::register::basepri as _basepri;
 pub use static_ref::Static;
 use cortex_m::interrupt::Nr;
 #[cfg(not(armv6m))]
-use cortex_m::register::{basepri_max, basepri};
+use cortex_m::register::basepri;
+use cortex_m::register::primask;
 
 #[cfg(not(armv6m))]
 macro_rules! barrier {
@@ -31,39 +34,61 @@ unsafe fn claim<T, U, R, F, G>(
     data: T,
     ceiling: u8,
     nvic_prio_bits: u8,
-    t: &mut Threshold,
     f: F,
     g: G,
 ) -> R
 where
-    F: FnOnce(U, &mut Threshold) -> R,
+    F: FnOnce(U) -> R,
     G: FnOnce(T) -> U,
 {
     let max_priority = 1 << nvic_prio_bits;
-    if ceiling > t.0 {
+
+    if primask::read().is_active() {
+        // Interrupts disabled. We are in a *global* critical section; we can
+        // directly access the data
+        f(g(data))
+    } else {
         match () {
-            #[cfg(armv6m)]
+            #[cfg(armv6)]
             () => {
-                atomic(|_| f(g(data), &mut Threshold::new(max_priority)))
+                interrupt::disable();
+                let ret = f(g(data));
+                interrupt::enable();
+                ret
             }
-            #[cfg(not(armv6m))]
+            #[cfg(not(armv6))]
             () => {
                 if ceiling == max_priority {
-                    atomic(|_| f(g(data), &mut Threshold::new(max_priority)))
-                } else {
-                    let old = basepri::read();
-                    let hw = (max_priority - ceiling) << (8 - nvic_prio_bits);
-                    basepri_max::write(hw);
-                    barrier!();
-                    let ret = f(g(data), &mut Threshold(ceiling));
-                    barrier!();
-                    basepri::write(old);
+                    // Can't raise the preemption threshold to match this
+                    // ceiling value. Use a *global* critical section
+                    interrupt::disable();
+                    let ret = f(g(data));
+                    interrupt::enable();
                     ret
+                } else {
+                    // current preemption threshold (hardware value)
+                    let old = basepri::read();
+                    // logical value of ^
+                    let t = (max_priority - old) >> (8 - nvic_prio_bits);
+
+                    if ceiling > t {
+                        // Raise the preemption threshold to protect the data
+                        let hw = (max_priority - ceiling) <<
+                            (8 - nvic_prio_bits);
+                        basepri::write(hw);
+                        barrier!();
+                        let ret = f(g(data));
+                        barrier!();
+                        basepri::write(old);
+                        ret
+                    } else {
+                        // The preemption threshold is high enough. Access to
+                        // the data is data race free
+                        f(g(data))
+                    }
                 }
             }
         }
-    } else {
-        f(g(data), t)
     }
 }
 
@@ -95,20 +120,14 @@ impl<P> Peripheral<P> {
         &'static self,
         ceiling: u8,
         nvic_prio_bits: u8,
-        t: &mut Threshold,
         f: F,
     ) -> R
     where
-        F: FnOnce(&P, &mut Threshold) -> R,
+        F: FnOnce(&P) -> R,
     {
-        claim(
-            &self.peripheral,
-            ceiling,
-            nvic_prio_bits,
-            t,
-            f,
-            |peripheral| &*peripheral.get(),
-        )
+        claim(&self.peripheral, ceiling, nvic_prio_bits, f, |peripheral| {
+            &*peripheral.get()
+        })
     }
 
     pub fn get(&self) -> *mut P {
@@ -157,13 +176,12 @@ impl<T> Resource<T> {
         &'static self,
         ceiling: u8,
         nvic_prio_bits: u8,
-        t: &mut Threshold,
         f: F,
     ) -> R
     where
-        F: FnOnce(&Static<T>, &mut Threshold) -> R,
+        F: FnOnce(&Static<T>) -> R,
     {
-        claim(&self.data, ceiling, nvic_prio_bits, t, f, |data| {
+        claim(&self.data, ceiling, nvic_prio_bits, f, |data| {
             Static::ref_(&*data.get())
         })
     }
@@ -173,13 +191,12 @@ impl<T> Resource<T> {
         &'static self,
         ceiling: u8,
         nvic_prio_bits: u8,
-        t: &mut Threshold,
         f: F,
     ) -> R
     where
-        F: FnOnce(&mut Static<T>, &mut Threshold) -> R,
+        F: FnOnce(&mut Static<T>) -> R,
     {
-        claim(&self.data, ceiling, nvic_prio_bits, t, f, |data| {
+        claim(&self.data, ceiling, nvic_prio_bits, f, |data| {
             Static::ref_mut(&mut *data.get())
         })
     }
@@ -195,16 +212,6 @@ where
 {
 }
 
-pub struct Threshold(u8);
-
-impl Threshold {
-    pub unsafe fn new(value: u8) -> Self {
-        Threshold(value)
-    }
-}
-
-impl !Send for Threshold {}
-
 /// Sets an interrupt as pending
 pub fn set_pending<I>(interrupt: I)
 where
@@ -217,20 +224,24 @@ where
 
 #[macro_export]
 macro_rules! task {
-    ($NAME:ident, $body:path) => {
+    ($device:ident, $NAME:ident, $body:path) => {
         #[allow(non_snake_case)]
         #[allow(unsafe_code)]
         #[no_mangle]
         pub unsafe extern "C" fn $NAME() {
-            let f: fn(&mut $crate::Threshold, ::$NAME::Resources) = $body;
+            let f: fn(::$NAME::Resources) = $body;
 
-            f(
-                &mut $crate::Threshold::new(::$NAME::$NAME),
-                ::$NAME::Resources::new(),
-            );
+            let nvic_prio_bits = $device::NVIC_PRIO_BITS;
+            let max_priority = 1 << nvic_prio_bits;
+            let hw = (max_priority - ::$NAME::$NAME) << (8 - nvic_prio_bits);
+
+            let old = $crate::_basepri::read();
+            $crate::_basepri::write(hw);
+            f(::$NAME::Resources::new());
+            $crate::_basepri::write(old);
         }
     };
-    ($NAME:ident, $body:path, $local:ident {
+    ($device:ident, $NAME:ident, $body:path, $local:ident {
         $($var:ident: $ty:ty = $expr:expr;)+
     }) => {
         struct $local {
@@ -242,7 +253,6 @@ macro_rules! task {
         #[no_mangle]
         pub unsafe extern "C" fn $NAME() {
             let f: fn(
-                &mut $crate::Threshold,
                 &mut $local,
                 ::$NAME::Resources,
             ) = $body;
@@ -251,11 +261,17 @@ macro_rules! task {
                 $($var: $expr,)+
             };
 
+            let nvic_prio_bits = $device::NVIC_PRIO_BITS;
+            let max_priority = 1 << nvic_prio_bits;
+            let hw = (max_priority - ::$NAME::$NAME) << (8 - nvic_prio_bits);
+
+            let old = $crate::_basepri::read();
+            $crate::_basepri::write(hw);
             f(
-                &mut $crate::Threshold::new(::$NAME::$NAME),
                 &mut LOCAL,
                 ::$NAME::Resources::new(),
             );
+            $crate::_basepri::write(old);
         }
     };
 }
