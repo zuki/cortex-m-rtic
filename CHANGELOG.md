@@ -5,6 +5,11 @@ This project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [Unreleased]
 
+## v0.5.3 - 2020-06-12
+
+- Renaming to RTIC complete and deprecation warnings added. Move to `cortex-m-rtic` https://rtic.rs/
+for the continuation of this project.
+
 ## [v0.5.2] - 2020-06-11
 
 - Using safe `DWT` interface

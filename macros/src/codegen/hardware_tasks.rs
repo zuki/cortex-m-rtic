@@ -58,6 +58,10 @@ pub fn codegen(
 
         let section = util::link_section("text", core);
         const_app.push(quote!(
+            #[deprecated(
+                since = "0.5.2",
+                note = "cortex-m-rtfm has been renamed and is deprecated, use cortex-m-rtic instead."
+            )]
             #[allow(non_snake_case)]
             #[no_mangle]
             #section

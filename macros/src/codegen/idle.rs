@@ -64,6 +64,10 @@ pub fn codegen(
             #[allow(non_snake_case)]
             #cfg_core
             #section
+            #[deprecated(
+                since = "0.5.2",
+                note = "cortex-m-rtfm has been renamed and is deprecated, use cortex-m-rtic instead."
+            )]
             fn #name(#(#locals_pat,)* #context: #name::Context) -> ! {
                 use rtfm::Mutex as _;
 

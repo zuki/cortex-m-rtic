@@ -1,6 +1,6 @@
-# Real Time For the Masses
+# DEPRECATED use `cortex-m-rtic` instead - Real Time For the Masses
 
-A concurrency framework for building real time systems.
+**RTFM has gone through a name change as per RFC https://github.com/rtic-rs/rfcs/pull/33 and the name will now be Real-Time Interrupt-driven Concurrency (RTIC).** A concurrency framework for building real time systems.
 
 ## Features
 

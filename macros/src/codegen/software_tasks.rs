@@ -170,6 +170,10 @@ pub fn codegen(
         let stmts = &task.stmts;
         let locals_pat = locals_pat.iter();
         user_tasks.push(quote!(
+            #[deprecated(
+                since = "0.5.2",
+                note = "cortex-m-rtfm has been renamed and is deprecated, use cortex-m-rtic instead."
+            )]
             #(#attrs)*
             #(#cfgs)*
             #[allow(non_snake_case)]

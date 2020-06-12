@@ -168,6 +168,10 @@ pub fn codegen(app: &App, analysis: &Analysis, extra: &Extra) -> Vec<TokenStream
             let section = util::link_section("text", receiver);
             let interrupt = util::suffixed(&interrupts[&level].to_string(), receiver);
             items.push(quote!(
+                #[deprecated(
+                    since = "0.5.2",
+                    note = "cortex-m-rtfm has been renamed and is deprecated, use cortex-m-rtic instead."
+                )]
                 #[allow(non_snake_case)]
                 #[doc = #doc]
                 #[no_mangle]

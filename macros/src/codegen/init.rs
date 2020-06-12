@@ -92,6 +92,10 @@ pub fn codegen(
             #(#attrs)*
             #cfg_core
             #[allow(non_snake_case)]
+            #[deprecated(
+                since = "0.5.2",
+                note = "cortex-m-rtfm has been renamed and is deprecated, use cortex-m-rtic instead."
+            )]
             #section
             fn #name(#(#locals_pat,)* #context: #name::Context) #ret {
                 #(#stmts)*
