@@ -152,7 +152,7 @@
                 <div id="content" class="content">
                     <main>
                         <h1 align="center">Real-Time Interrupt-driven Concurrency</h1>
-<p align="center">A concurrency framework for building real time systems</p>
+<p align="center">A concurrency framework for building real-time systems</p>
 <h1><a class="header" href="#preface" id="preface">Preface</a></h1>
 <p>This book contains user level documentation for the Real-Time Interrupt-driven Concurrency
 (RTIC) framework. The API reference can be found <a href="../../api/">here</a>.</p>
@@ -402,7 +402,7 @@ idle
 <p>To declare interrupt handlers the framework provides a <code>#[task]</code> attribute that
 can be attached to functions. This attribute takes a <code>binds</code> argument whose
 value is the name of the interrupt to which the handler will be bound to; the
-function adornated with this attribute becomes the interrupt handler. Within the
+function adorned with this attribute becomes the interrupt handler. Within the
 framework these type of tasks are referred to as <em>hardware</em> tasks, because they
 start executing in reaction to a hardware event.</p>
 <p>The example below demonstrates the use of the <code>#[task]</code> attribute to declare an
@@ -1096,7 +1096,7 @@ platform can deal with peak payload or if the processor needs to be replaced
 with a faster one.</p>
 </li>
 <li>
-<p>Ignoring the result. In soft real time and non real time applications it may
+<p>Ignoring the result. In soft real-time and non real-time applications it may
 be OK to occasionally lose data or fail to respond to some events during event
 bursts. In those scenarios silently letting a <code>spawn</code> call fail may be
 acceptable.</p>
@@ -2070,7 +2070,7 @@ const APP: () = {
     }
 };
 </code></pre></pre>
-<p>Or, you can use the <a href="https://crates.io/crates/cargo-expand"><code>cargo-expand</code></a> subcommand. This subcommand will expand
+<p>Or, you can use the <a href="https://crates.io/crates/cargo-expand"><code>cargo-expand</code></a> sub-command. This sub-command will expand
 <em>all</em> the macros, including the <code>#[rtic::app]</code> attribute, and modules in your
 crate and print the output to the console.</p>
 <pre><code class="language-console">$ # produces the same output as before
@@ -2078,7 +2078,7 @@ $ cargo expand --example smallest | tail
 </code></pre>
 <h2><a class="header" href="#resource-de-structure-ing" id="resource-de-structure-ing">Resource de-structure-ing</a></h2>
 <p>When having a task taking multiple resources it can help in readability to split
-up the resource struct. Here're two examples on how this can be done:</p>
+up the resource struct. Here are two examples on how this can be done:</p>
 <pre><pre class="playpen"><code class="language-rust">
 # #![allow(unused_variables)]
 #fn main() {
