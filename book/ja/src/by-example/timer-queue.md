@@ -1,82 +1,75 @@
-# Timer queue
+# タイマーキュー
 
-In contrast with the `spawn` API, which immediately spawns a software task onto
-the scheduler, the `schedule` API can be used to schedule a task to run some
-time in the future.
+`spawn` APIがソフトウェアタスクをスケジューラに即座にスポーンするのとは
+対照的に、`schedule` APIを使用すると、将来のある時点でタスクを実行する
+ようスケジューリングすることができます。
 
-To use the `schedule` API a monotonic timer must be first defined using the
-`monotonic` argument of the `#[app]` attribute. This argument takes a path to a
-type that implements the [`Monotonic`] trait. The associated type, `Instant`, of
-this trait represents a timestamp in arbitrary units and it's used extensively
-in the `schedule` API -- it is suggested to model this type after [the one in
-the standard library][std-instant].
+`schedule` APIを使用するには、まず`#[app]`属性の`monotonic`引数を
+使用してモノトニックタイマー（単調増加するタイマー）を定義しなければなりません。
+この引数は、[`Monotonic`]トレイトを実装した型へのパスを取ります。この
+トレイトの関連型`Instant`は、任意の単位でのタイムスタンプを表し、
+`schedule` APIで広く使用されます。この型には[標準ライブラリの型][std-instant]を
+モデル化することが推奨されます。
 
-Although not shown in the trait definition (due to limitations in the trait /
-type system) the subtraction of two `Instant`s should return some `Duration`
-type (see [`core::time::Duration`]) and this `Duration` type must implement the
-`TryInto<u32>` trait. The implementation of this trait must convert the
-`Duration` value, which uses some arbitrary unit of time, into the "system timer
-(SYST) clock cycles" time unit. The result of the conversion must be a 32-bit
-integer. If the result of the conversion doesn't fit in a 32-bit number then the
-operation must return an error, any error type.
+トレイト定義では示されていませんが（トレイト/型システムの制限のため）、
+2つの`Instant`の減算は、`Duration`型（[`core::time::Duration`]を
+参照）を返すべきであり、この`Duration`型は`TryInto<u32>`トレイトを
+実装しなければなりません。このトレイトの実装は、任意の時間単位を使用する
+`Duration`値を「システムタイマー(SYST)クロックサイクル」時間単位に
+変換しなければなりません。変換結果は32ビット整数でなければなりません。
+変換の結果が32ビット数に収まらない場合、その操作は何らかのエラー型の
+エラーを返さなければなりません。
 
 [`Monotonic`]: ../../../api/rtic/trait.Monotonic.html
 [std-instant]: https://doc.rust-lang.org/std/time/struct.Instant.html
 [`core::time::Duration`]: https://doc.rust-lang.org/core/time/struct.Duration.html
 
-For ARMv7+ targets the `rtic` crate provides a `Monotonic` implementation based
-on the built-in CYCle CouNTer (CYCCNT). Note that this is a 32-bit timer clocked
-at the frequency of the CPU and as such it is not suitable for tracking time
-spans in the order of seconds.
+ARMv7+を対象とした場合、`rtic`クレートはビルトインCYCle CouNTer（CYCCNT）
+に基づく`Monotonic`実装を提供しています。これはCPUの周波数でクロックする
+32ビットタイマーであり、秒単位の時間間隔の追跡には適していないことに注意
+してください。
 
-To be able to schedule a software task from a context the name of the task must
-first appear in the `schedule` argument of the context attribute. When
-scheduling a task the (user-defined) `Instant` at which the task should be
-executed must be passed as the first argument of the `schedule` invocation.
+コンテキストからソフトウェアタスクをスケジュールできるようにするには、
+まず、タスクの名前をコンテキスト属性の`schedule`引数に示さなければいけません。
+タスクをスケジューリングする際、その時点でタスクが実行されるべき（ユーザ
+定義の）`Instant`を`schedule`呼び出しの最初の引数として渡さなければ
+なりません。
 
-Additionally, the chosen `monotonic` timer must be configured and initialized
-during the `#[init]` phase. Note that this is *also* the case if you choose to
-use the `CYCCNT` provided by the `cortex-m-rtic` crate.
+さらに、選択された`monotonic`タイマーは、`#[init]`フェーズ中に設定と
+初期化をする必要があります。これは、`cortex-m-rtic`クレートが提供する
+`CYCCNT`を使用する場合*も*同様であることに注意してください。
 
-The example below schedules two tasks from `init`: `foo` and `bar`. `foo` is
-scheduled to run 8 million clock cycles in the future. Next, `bar` is scheduled
-to run 4 million clock cycles in the future. Thus `bar` runs before `foo` since
-it was scheduled to run first.
+下の例では、`foo`と`bar`の2つのタスクを`init`からスケジュールしています。
+`foo`は800万クロックサイクル後に実行するようにスケジュールされており、
+`bar`は400万クロックサイクル後に実行するようにスケジュールされています。
+つまり、`bar`の方が先に実行するようスケジュールされているので、`foo`より先に`実行されます。
 
-> **IMPORTANT**: The examples that use the `schedule` API or the `Instant`
-> abstraction will **not** properly work on QEMU because the Cortex-M cycle
-> counter functionality has not been implemented in `qemu-system-arm`.
+> **重要**: `schedule` APIまたは`Instant`抽象化を使用した例はQEMU上では
+> 正しく動作しません。Cortex-Mのサイクルカウンタ機能が`qemu-system-arm`
+> には実装されていないからです。
+
 
 ``` rust
 {{#include ../../../../examples/schedule.rs}}
 ```
 
-Running the program on real hardware produces the following output in the
-console:
+実際のハードウェア上でプログラムを実行すると、コンソールに次のような出力が出力されます。
 
 ``` text
 {{#include ../../../../ci/expected/schedule.run}}
 ```
 
-When the `schedule` API is being used the runtime internally uses the `SysTick`
-interrupt handler and the system timer peripheral (`SYST`) so neither can be
-used by the application. This is accomplished by changing the type of
-`init::Context.core` from `cortex_m::Peripherals` to `rtic::Peripherals`. The
-latter structure contains all the fields of the former minus the `SYST` one.
+`schedule`APIが使用されている場合、ランタイムは内部的に`SysTick`割り込みハンドラとシステムタイマーペリフェラル(`SYST`)を使用するので、アプリケーションはどちらも使用できません。これは`init::Context.core`の型を`cortex_m::Peripherals`から`rtic::Peripherals`に変更することで使用できるようになります。後者の構造体は、前者のフィールドのうち、SYSTフィールドを除いた全てのフィールドを含んでいます。
 
-## Periodic tasks
+## 定期的タスク
 
-Software tasks have access to the `Instant` at which they were scheduled to run
-through the `scheduled` variable. This information and the `schedule` API can be
-used to implement periodic tasks as shown in the example below.
+ソフトウェアタスクは、実行するようスケジュールされた時点の`Instant`に`scheduled`変数を通じてアクセスすることができます。この情報と`schedule`APIを使用して、以下の例で示すように定期的なタスクを実装することができます。
 
 ``` rust
 {{#include ../../../../examples/periodic.rs}}
 ```
 
-This is the output produced by the example. Note that there is zero drift /
-jitter even though `schedule.foo` was invoked at the *end* of `foo`. Using
-`Instant::now` instead of `scheduled` would have resulted in drift / jitter.
+以下はは例の出力です。`schedule.foo`は`foo`の最後で呼び出されているにもかかわらず、ドリフトやジッターがゼロであることに注意してください。`scheduled`の代わりに`Instant::now`を使うと、ドリフトやジッターが発生します。
 
 ``` text
 {{#include ../../../../ci/expected/periodic.run}}
@@ -84,31 +77,19 @@ jitter even though `schedule.foo` was invoked at the *end* of `foo`. Using
 
 ## Baseline
 
-For the tasks scheduled from `init` we have exact information about their
-`scheduled` time. For hardware tasks there's no `scheduled` time because these
-tasks are asynchronous in nature. For hardware tasks the runtime provides a
-`start` time, which indicates the time at which the task handler started
-executing.
+`init`からスケジュールされたタスクについては、`scheduled`時間に関する正確な情報を得ることができます。ハードウェアタスクについてはその性質上非同期なので、`scheduled`時間はありません。ハードウェアタスクについては、ランタイムはタスクハンドラが実行を開始した時間を示す`start`時間を提供します。
 
-Note that `start` is **not** equal to the arrival time of the event that fired
-the task. Depending on the priority of the task and the load of the system the
-`start` time could be very far off from the event arrival time.
+`start`はタスクを起動したイベントの到着時間とは一致**しない**ことに注意してください。タスクの優先度やシステムの負荷によっては、`start`時間はイベント到着時間よりかなり離れている可能性があります。
 
-What do you think will be the value of `scheduled` for software tasks that are
-*spawned* instead of scheduled? The answer is that spawned tasks inherit the
-*baseline* time of the context that spawned it. The baseline of hardware tasks
-is their `start` time, the baseline of software tasks is their `scheduled` time
-and the baseline of `init` is the system start time or time zero
-(`Instant::zero()`). `idle` doesn't really have a baseline but tasks spawned
-from it will use `Instant::now()` as their baseline time.
+スケジュールではなく*スポーンされた*ソフトウェアタスクの`scheduled`の価値はどうなると思いますか。スポーンされたタスクはそれをスポーンしたコンテキストの*ベースライン*時間を継承するというのが答えです。ハードウェアタスクのベースラインは`start`時間であり、ソフトウェアタスクのベースラインは`scheduled`時間であり、`init`のベースラインはシステムの開始時間、すなわち時刻ゼロ(`Instant::zero()`)です。`idle`には実際にはベースラインはありませんが、そこからスポーンされたタスクは`Instatnt::now()`をベースライン時間として使用するでしょう。
 
-The example below showcases the different meanings of the *baseline*.
+以下の例は*ベースライン*の異なる意味あいを示しています。
 
 ``` rust
 {{#include ../../../../examples/baseline.rs}}
 ```
 
-Running the program on real hardware produces the following output in the console:
+実際のハードウェア上でプログラムを実行すると、コンソールに次のような出力が出力されます。
 
 ``` text
 {{#include ../../../../ci/expected/baseline.run}}
