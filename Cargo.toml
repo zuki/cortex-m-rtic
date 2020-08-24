@@ -75,7 +75,7 @@ version = "0.5.2"
 
 [dependencies.stm32f4]
 version = "0.11.0"
-features = [ "stm32f407", "rt" ]
+features = [ "stm32f407" ]
 
 [target.x86_64-unknown-linux-gnu.dev-dependencies]
 trybuild = "1"

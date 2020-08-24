@@ -21,4 +21,4 @@ monitor arm semihosting enable
 
 load
 
-#continue
+continue
