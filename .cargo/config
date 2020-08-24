@@ -4,7 +4,13 @@ runner = "qemu-system-arm -cpu cortex-m3 -machine lm3s6965evb -nographic -semiho
 [target.thumbv7m-none-eabi]
 runner = "qemu-system-arm -cpu cortex-m3 -machine lm3s6965evb -nographic -semihosting-config enable=on,target=native -kernel"
 
+[target.thumbv7em-none-eabihf]
+runner = "gdb -q -x openocd.gdb"
+
 [target.'cfg(all(target_arch = "arm", target_os = "none"))']
 rustflags = [
   "-C", "link-arg=-Tlink.x",
 ]
+
+[build]
+target = "thumbv7em-none-eabihf"
