@@ -1,27 +1,14 @@
-## Resources
+## リソース
 
-The framework provides an abstraction to share data between any of the contexts
-we saw in the previous section (task handlers, `init` and `idle`): resources.
+このフレームワークは、前章で見たコンテキスト(タスクハンドラ、`init`、`idle`)間でデータを共有するための抽象化であるリソースを提供します。
 
-Resources are data visible only to functions declared within the `#[app]`
-pseudo-module. The framework gives the user complete control over which context
-can access which resource.
+リソースは`#[app]`疑似モジュール内で宣言された関数にだけ見えるデータです。フレームワークは、どのコンテキストがどのリソースにアクセスできるかをユーザが完全にコントロールできるようにします。
 
-All resources are declared as a single `struct` within the `#[app]`
-pseudo-module. Each field in the structure corresponds to a different resource.
-Resources can optionally be given an initial value using the `#[init]`
-attribute. Resources that are not given an initial value are referred to as
-*late* resources and are covered in more detail in a follow-up section in this
-page.
+すべてのリソースは`#[app]`擬似モジュールにおいて1つの`struct`として宣言されます。構造体の各フィールドは様々なリソースに対応します。リソースには`#[init]`属性を使用して初期値を与えることができます。初期値が与えられないリソースは*遅延*リソースと呼ばれ、このページの後続セクションで詳しく説明します。
 
-Each context (task handler, `init` or `idle`) must declare the resources it
-intends to access in its corresponding metadata attribute using the `resources`
-argument. This argument takes a list of resource names as its value. The listed
-resources are made available to the context under the `resources` field of the
-`Context` structure.
+各コンテキスト(タスクハンドラ、`init`、`idle`)は、アクセスしようとするリソースを対応するメタデータ属性の`resources`引数を使って宣言しなければなりません。この引数は、リソース名のリストを値として受け取ります。リストされたリソースは`Context`構造体の`resources`フィールドとしてコンテキストが利用できるようになります。
 
-The example application shown below contains two interrupt handlers that share
-access to a resource named `shared`.
+以下の例は、`shared`という名前のリソースへのアクセスを2つの割り込みハンドラが共有していることを示しています。
 
 ``` rust
 {{#include ../../../../examples/resource.rs}}
@@ -29,41 +16,25 @@ access to a resource named `shared`.
 
 ``` console
 $ cargo run --example resource
-{{#include ../../../../ci/expected/resource.run}}```
+{{#include ../../../../ci/expected/resource.run}}
+```
 
-Note that the `shared` resource cannot be accessed from `idle`. Attempting to do
-so results in a compile error.
+`idle`からは`shared`リソースにアクセスできないことに注意してください。これを試みるとコンパイルエラーになります。
 
 ## `lock`
 
-In the presence of preemption critical sections are required to mutate shared
-data in a data race free manner. As the framework has complete knowledge over
-the priorities of tasks and which tasks can access which resources it enforces
-that critical sections are used where required for memory safety.
+プリエンプションがある場合、データ競合が発生しないように共有データを変更するにはクリティカルセクションが必要になります。フレームワークはタスクの優先順位とどのタスクがどのリソースにアクセスできるかを完全に把握しているので、メモリの安全性のために必要な場合クリティカルセクションの使用を強制します。
 
-Where a critical section is required the framework hands out a resource proxy
-instead of a reference. This resource proxy is a structure that implements the
-[`Mutex`] trait. The only method on this trait, [`lock`], runs its closure
-argument in a critical section.
+クリティカルセクションが必要な場合、フレームワークは参照ではなくリソースプロキシを渡します。このリソースプロキシは[`Mutex`]トレイトを実装した構造体です。このトレイトの唯一のメソッドである[`lock`]は、そのクロージャ引数をクリティカルセクションで実行します。
 
 [`Mutex`]: ../../../api/rtic/trait.Mutex.html
 [`lock`]: ../../../api/rtic/trait.Mutex.html#method.lock
 
-The critical section created by the `lock` API is based on dynamic priorities:
-it temporarily raises the dynamic priority of the context to a *ceiling*
-priority that prevents other tasks from preempting the critical section. This
-synchronization protocol is known as the [Immediate Ceiling Priority Protocol
-(ICPP)][icpp].
+`lock` APIで作成されるクリティカルセクションは動的優先度に基づいています。すなわち、コンテキストの動的優先度を一時的に*上限*優先度に引き上げ、他のタスクがクリティカルセクションをプリエンプションしないようにします。この同期プロトコルは、[Immediate Ceiling Priority Protocol (ICPP)][icpp]として知られています。
 
 [icpp]: https://en.wikipedia.org/wiki/Priority_ceiling_protocol
 
-In the example below we have three interrupt handlers with priorities ranging
-from one to three. The two handlers with the lower priorities contend for the
-`shared` resource. The lowest priority handler needs to `lock` the
-`shared` resource to access its data, whereas the mid priority handler can
-directly access its data. The highest priority handler, which cannot access
-the `shared` resource, is free to preempt the critical section created by the
-lowest priority handler.
+以下の例では、優先度が1から3までの3つの割り込みハンドラを使用しています。優先度の低い2つのハンドラが`shared`リソースを争っています。最低の優先度を持つハンドラはデータのアクセスに`shared`リソースの`lock`が必要ですが、中間の優先度を持つタスクは直接データにアクセスすることができます。最高の優先度を持つハンドラは（`shared`リソースにはアクセスできませんが）最低の優先度を持つハンドラによって作成されたクリティカルセクションを自由にプリエンプションできます。
 
 ``` rust
 {{#include ../../../../examples/lock.rs}}
@@ -71,25 +42,19 @@ lowest priority handler.
 
 ``` console
 $ cargo run --example lock
-{{#include ../../../../ci/expected/lock.run}}```
+{{#include ../../../../ci/expected/lock.run}}
+```
 
-## Late resources
+## 遅延リソース
 
-Late resources are resources that are not given an initial value at compile time
-using the `#[init]` attribute but instead are initialized at runtime using the
-`init::LateResources` values returned by the `init` function.
+遅延リソースとは、`#[init]`属性を使ってコンパイル時に初期値が与えられず、代わりに`init`関数が返す`init::LateResources`の値を使って実行時に初期化されるリソースのことです。
 
-Late resources are useful for *moving* (as in transferring the ownership of)
-peripherals initialized in `init` into interrupt handlers.
+遅延リソースは、`init`で初期化されたペリフェラルを（所有権の移行という形で）*移動*するのに便利です。
 
-The example below uses late resources to establish a lockless, one-way channel
-between the `UART0` interrupt handler and the `idle` task. A single producer
-single consumer [`Queue`] is used as the channel. The queue is split into
-consumer and producer end points in `init` and then each end point is stored
-in a different resource; `UART0` owns the producer resource and `idle` owns
-the consumer resource.
+以下の例では、`UART0`割り込みハンドラと`idle`タスクの間にロックのない一方向のチャネルを確立するのにレイトリソースを使用しています。一つのプロデューサと一つのコンシューマからなる[`Queue`]が、チャネルとして使用されています。キューは`init`においてコンシューマとプロデューサの２つのエンドポイントに分割され、各エンドポイントが異なるリソースに格納されています。すなわち、`UART0`がプロデューサリソースを、`idle`がコンシューマリソースを所有しています。
 
 [`Queue`]: ../../../api/heapless/spsc/struct.Queue.html
+
 
 ``` rust
 {{#include ../../../../examples/late.rs}}
@@ -97,29 +62,18 @@ the consumer resource.
 
 ``` console
 $ cargo run --example late
-{{#include ../../../../ci/expected/late.run}}```
+{{#include ../../../../ci/expected/late.run}}
+```
 
-## Only shared access
+## 共有アクセスのみ
 
-By default the framework assumes that all tasks require exclusive access
-(`&mut-`) to resources but it is possible to specify that a task only requires
-shared access (`&-`) to a resource using the `&resource_name` syntax in the
-`resources` list.
+フレームワークは、デフォルトでは、すべてのタスクがリソースへの排他的アクセス(`&mut-`)を必要であると仮定しますが、`resources`リストに`&resource_name`構文を使うことでタスクがリソースへの共有アクセス(`&-`)のみを必要とすることを指定することができます。
 
-The advantage of specifying shared access (`&-`) to a resource is that no locks
-are required to access the resource even if the resource is contended by several
-tasks running at different priorities. The downside is that the task only gets a
-shared reference (`&-`) to the resource, limiting the operations it can perform
-on it, but where a shared reference is enough this approach reduces the number
-of required locks.
+リソースへの共有アクセス(`&-`)を指定する利点は、異なる優先度で実行されている複数のタスクでリソースが競合するような場合でも、リソースにアクセスする際にロックが必要ないことです。マイナス面は、タスクがリソースへの共有参照(`&-`)を取得するだけなのでリソースに対して実行できる操作が制限されることです。ただし、共有参照で十分な場合、このアプローチは必要なロックの数を減らします。
 
-Note that in this release of RTIC it is not possible to request both exclusive
-access (`&mut-`) and shared access (`&-`) to the *same* resource from different
-tasks. Attempting to do so will result in a compile error.
+このリリースのRTICでは、*ある*リソースに対して異なるタスクから排他的アクセス(`&mut-`)と共有アクセス(`&-`)の両方を要求することはできないことに注意してください。そうしようとするとコンパイルエラーになります。
 
-In the example below a key (e.g. a cryptographic key) is loaded (or created) at
-runtime and then used from two tasks that run at different priorities without
-any kind of lock.
+以下の例では、鍵(例えば暗号鍵)が実行時にロード(または作成)され、異なる優先度で実行する2つのタスクからロックなしで使用されています。
 
 ``` rust
 {{#include ../../../../examples/only-shared-access.rs}}
@@ -127,4 +81,5 @@ any kind of lock.
 
 ``` console
 $ cargo run --example only-shared-access
-{{#include ../../../../ci/expected/only-shared-access.run}}```
+{{#include ../../../../ci/expected/only-shared-access.run}}
+```
