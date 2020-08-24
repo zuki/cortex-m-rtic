@@ -1,81 +1,80 @@
-# The `app` attribute
+# `app`属性
 
-This is the smallest possible RTIC application:
+以下は実行可能な最小のRTICアプリケーションです。
 
 ``` rust
 {{#include ../../../../examples/smallest.rs}}
 ```
 
-All RTIC applications use the [`app`] attribute (`#[app(..)]`). This attribute
-must be applied to a `const` item that contains items. The `app` attribute has
-a mandatory `device` argument that takes a *path* as a value. This path must
-point to a *peripheral access crate* (PAC) generated using [`svd2rust`]
-**v0.14.x** or newer. The `app` attribute will expand into a suitable entry
-point so it's not required to use the [`cortex_m_rt::entry`] attribute.
+すべてのRTICアプリケーションは[`app`]属性を使用します (`#[app(..)]`)。
+この属性は、複数のアイテムを含む`const`アイテムに適用しなければなりません。
+`app`属性は、値として*パス*を取る必須の`device`引数を持ちます。このパスには
+**v0.14.x**以降のバージョンの[`svd2rust`]を使用して生成された
+*peripheral access crate*（PAC）を指定する必要があります。`app`属性は
+適切なエントリポイントに展開されますので、[`cortex_m_rt::entry`]属性を使用する
+必要はありません。
 
 [`app`]: ../../../api/cortex_m_rtic_macros/attr.app.html
 [`svd2rust`]: https://crates.io/crates/svd2rust
 [`cortex_m_rt::entry`]: ../../../api/cortex_m_rt_macros/attr.entry.html
 
-> **ASIDE**: Some of you may be wondering why we are using a `const` item as a
-> module and not a proper `mod` item. The reason is that using attributes on
-> modules requires a feature gate, which requires a nightly toolchain. To make
-> RTIC work on stable we use the `const` item instead. When more parts of macros
-> 1.2 are stabilized we'll move from a `const` item to a `mod` item and
-> eventually to a crate level attribute (`#![app]`).
+> **余談**: なぜ、通常の`mod`アイテムではなく`const`アイテムを使うのか不思議に思う
+> 方がいるでしょう。その理由は、moduleに属性を使用するにはfeatureゲートが必要であり、
+> そのためにはnightlyツールチェインがが必要だからです。RTICを安定版で動かせるように
+> するために`const`アイテムを使用しています。macros 1.2のより多くの部分が安定化すれば
+> `const`から`mod`アイテムに、さらにはcrateレベルの属性(`#![app]`)へと移行する予定です。
 
 ## `init`
 
-Within the pseudo-module the `app` attribute expects to find an initialization
-function marked with the `init` attribute. This function must have signature
-`fn(init::Context) [-> init::LateResources]` (the return type is not always
-required).
+`app`属性は擬似モジュール中に`init`属性でマークされた初期化関数があることを
+期待します。この関数のシグネチャは`fn(init::Context) [-> init::LateResources]`で
+なければなりません (戻り値の型は必ずしも必要ではありません)。
 
-This initialization function will be the first part of the application to run.
-The `init` function will run *with interrupts disabled* and has exclusive access
-to Cortex-M and, optionally, device specific peripherals through the `core` and
-`device` fields of `init::Context`.
+この初期化関数はアプリケーションで最初に実行される部分になります。`init`関数は
+*割り込みが無効の状態で*実行されます。また、`init::Context`の`core`
+フィールドを通じてCortex-Mのペリフェラルに、任意ですが`device`フィールドを
+通じてデバイス固有のペリフェラルに、各々排他的にアクセスできます。
 
-`static mut` variables declared at the beginning of `init` will be transformed
-into `&'static mut` references that are safe to access.
+`init`の冒頭で宣言された`static mut`変数は、安全にアクセスできる
+`&'static mut`参照に変換されます。
 
 [`rtic::Peripherals`]: ../../api/rtic/struct.Peripherals.html
 
-The example below shows the types of the `core` and `device` fields and
-showcases safe access to a `static mut` variable. The `device` field is only
-available when the `peripherals` argument is set to `true` (it defaults to
-`false`).
+以下の例は、`core`フィールドと`device`フィールドの型と`static mut`変数
+への安全なアクセスの例を示しています。`device`フィールドは、
+`peripherals`引数が`true`に設定された場合のみ利用できます
+（デフォルトは`false`です）。
 
 ``` rust
 {{#include ../../../../examples/init.rs}}
 ```
 
-Running the example will print `init` to the console and then exit the QEMU
-process.
+この例を実行するとコンソールに`init`と表示され、QEMUプロセスは終了します。
 
 ```  console
 $ cargo run --example init
-{{#include ../../../../ci/expected/init.run}}```
+{{#include ../../../../ci/expected/init.run}}
+```
 
 ## `idle`
 
-A function marked with the `idle` attribute can optionally appear in the
-pseudo-module. This function is used as the special *idle task* and must have
-signature `fn(idle::Context) - > !`.
+任意で、`idle`属性でマークした関数を擬似モジュール内に置くことができます。
+この関数は、特別な*アイドルタスク*として使用され、シグネチャは
+`fn(idle::Context) - > !`でなければなりません。
 
-When present, the runtime will execute the `idle` task after `init`. Unlike
-`init`, `idle` will run *with interrupts enabled* and it's not allowed to return
-so it must run forever.
+この関数が存在するとランタイムは`init`の後に`idle`タスクを実行します。
+`init`とは異なり、`idle`は*割り込みが有効な状態*で実行されます。そして、
+リターンすることは許されず、永遠に実行しなければなりません。
 
-When no `idle` function is declared, the runtime sets the [SLEEPONEXIT] bit and
-then sends the microcontroller to sleep after running `init`.
+`idle`関数が宣言されていない場合、ランタイムは[SLEEPONEXIT]ビットを
+セットし、`init`を実行後にマイクロコントローラをスリープ状態にします。
 
 [SLEEPONEXIT]: https://developer.arm.com/docs/100737/0100/power-management/sleep-mode/sleep-on-exit-bit
 
-Like in `init`, `static mut` variables will be transformed into `&'static mut`
-references that are safe to access.
+`init`同様、`static mut`変数は安全にアクセスできる`&'static mut`参照に
+変換されます。
 
-The example below shows that `idle` runs after `init`.
+以下の例は、`init`後に`idle`が実行することを示しています。
 
 ``` rust
 {{#include ../../../../examples/idle.rs}}
@@ -83,20 +82,21 @@ The example below shows that `idle` runs after `init`.
 
 ``` console
 $ cargo run --example idle
-{{#include ../../../../ci/expected/idle.run}}```
+{{#include ../../../../ci/expected/idle.run}}
+```
 
-## Hardware tasks
+## ハードウェアタスク
 
-To declare interrupt handlers the framework provides a `#[task]` attribute that
-can be attached to functions. This attribute takes a `binds` argument whose
-value is the name of the interrupt to which the handler will be bound to; the
-function adorned with this attribute becomes the interrupt handler. Within the
-framework these type of tasks are referred to as *hardware* tasks, because they
-start executing in reaction to a hardware event.
+フレームワークは割り込みハンドラを宣言するために関数に指定することができる
+`#[task]`属性を提供しています。この属性は`binds`引数をとり、その値は
+ハンドラがバインドされる割込みの名前です。この属性が付けられた関数が
+割込みハンドラになります。このフレームワークではこれらのタイプのタスクは
+*ハードウェア*タスクと呼ばれます。ハードウェア・イベントに反応して実行を
+開始するからです。
 
-The example below demonstrates the use of the `#[task]` attribute to declare an
-interrupt handler. Like in the case of `#[init]` and `#[idle]` local `static
-mut` variables are safe to use within a hardware task.
+以下の例は、割り込みハンドラの宣言に使用する`#[task]`属性を示しています。
+`#[init]`や`#[idle]`の場合と同様に、ローカルの`static mut`変数は
+ハードウェアタスク内で安全に使用できます。
 
 ``` rust
 {{#include ../../../../examples/hardware.rs}}
@@ -104,31 +104,31 @@ mut` variables are safe to use within a hardware task.
 
 ``` console
 $ cargo run --example hardware
-{{#include ../../../../ci/expected/hardware.run}}```
+{{#include ../../../../ci/expected/hardware.run}}
+```
 
-So far all the RTIC applications we have seen look no different than the
-applications one can write using only the `cortex-m-rt` crate. From this point
-we start introducing features unique to RTIC.
+今のところ、これまで見てきたRTICアプリケーションは、`cortex-m-rt`クレート
+だけを使って書くことができるアプリケーションと何ら変わりはありません。
+ここからは、RTIC独自の機能を紹介していきます。
 
-## Priorities
+## 優先度
 
-The static priority of each handler can be declared in the `task` attribute
-using the `priority` argument. Tasks can have priorities in the range `1..=(1 <<
-NVIC_PRIO_BITS)` where `NVIC_PRIO_BITS` is a constant defined in the `device`
-crate. When the `priority` argument is omitted, the priority is assumed to be
-`1`. The `idle` task has a non-configurable static priority of `0`, the lowest
-priority.
+各ハンドラの静的な優先度は、`task`属性の`priority`引数を使用して宣言する
+ことができます。タスクは`1...=(1 << NVIC_PRIO_BITS)`の範囲の優先度を
+持つことができます。ここで`NVIC_PRIO_BITS`は`device`クレートで定義される
+定数です。`priority`引数が省略された場合、優先度は`1`とみなされます。
+`idle`タスクには、最も低い優先度の`0`が設定不能な静的な優先度として
+設定されています。
 
-When several tasks are ready to be executed the one with *highest* static
-priority will be executed first. Task prioritization can be observed in the
-following scenario: an interrupt signal arrives during the execution of a low
-priority task; the signal puts the higher priority task in the pending state.
-The difference in priority results in the higher priority task preempting the
-lower priority one: the execution of the lower priority task is suspended and
-the higher priority task is executed to completion. Once the higher priority
-task has terminated the lower priority task is resumed.
+複数のタスクが実行可能な状態になっている場合、*最も高い*静的優先度を持つタスクが
+最初に実行されます。タスクの優先度については次のシナリをでみることができます。
+優先度の低いタスクの実行中に割り込み信号が来ると、優先度の高いタスクが保留
+状態になります。優先度の違いにより、優先度の高いタスクが低いタスクを
+プリエンプションします。優先度の低いタスクの実行は中断され、優先度の高い
+タスクが最後まで実行されます。優先度の高いタスクが終了すると、優先度の低い
+タスクが再開されます。
 
-The following example showcases the priority based scheduling of tasks.
+以下の例は、優先度に基づいたタスクのスケジューリングを示しています。
 
 ``` rust
 {{#include ../../../../examples/preempt.rs}}
@@ -136,16 +136,17 @@ The following example showcases the priority based scheduling of tasks.
 
 ``` console
 $ cargo run --example preempt
-{{#include ../../../../ci/expected/preempt.run}}```
+{{#include ../../../../ci/expected/preempt.run}}
+```
 
-Note that the task `gpiob` does *not* preempt task `gpioc` because its priority
-is the *same* as `gpioc`'s. However, once `gpioc` terminates the execution of
-task, `gpiob` is prioritized over `gpioa` due to its higher priority. `gpioa`
-is resumed only after `gpiob` terminates.
+タスク`gpiob`はタスク`gpioc`をプリエンプションしないことに注意してください。
+`gpiob`の優先度は`gpioc`の優先度と同じからです。タスク`gpioc`の実行が
+終了すると、`gpiob`は`gpioa`より優先度が高いため実行が優先され、`gpiob`
+の終了後に`gpioa`は再開されます。
 
-One more note about priorities: choosing a priority higher than what the device
-supports (that is `1 << NVIC_PRIO_BITS`) will result in a compile error. Due to
-limitations in the language, the error message is currently far from helpful: it
-will say something along the lines of "evaluation of constant value failed" and
-the span of the error will *not* point out to the problematic interrupt value --
-we are sorry about this!
+優先度についてのもう一つ注意事項があります。デバイスがサポートしている優先度
+（すなわち、`1 << NVIC_PRIO_BITS`）よりも高い優先度を選択するとコンパイル
+エラーになります。この言語の制約のため、そのエラーメッセージは現在のところ
+有用なものとは程遠いものとなっています。「定数値の評価に失敗しました」という
+行と共に何かを言いますが、エラー表示の中で問題となる割込みの値を指摘する
+ことは*ありません*。これについては申し訳ありません。
