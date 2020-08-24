@@ -1,16 +1,11 @@
-# RTIC by example
+# 例によるRTIC
 
-This part of the book introduces the Real-Time Interrupt-driven Concurrency (RTIC) framework
-to new users by walking them through examples of increasing complexity.
+この章では、徐々に複雑になる例を通じてRTIC（Real-Time Interrupt-driven Concurrency）フレームワークを新規利用者に紹介します。
 
-All examples in this part of the book can be found in the GitHub [repository] of
-the project, and most of the examples can be run on QEMU so no special hardware
-is required to follow along.
+この章のすべての例はこのプロジェクトのGitHub [repository] にあります。また、ほとんどの例はQEMUで実行することができますので、ついていくのに特別なハードウェアは必要ありません。
 
 [repository]: https://github.com/rtic-rs/cortex-m-rtic
 
-To run the examples on your laptop / PC you'll need the `qemu-system-arm`
-program. Check [the embedded Rust book] for instructions on how to set up an
-embedded development environment that includes QEMU.
+お手元のパソコンで例を実行するには`qemu-system-arm`プログラムが必要になります。QEMUを含む組み込み開発環境の設定方法については [組込みRustブック] を参照ください。
 
-[the embedded Rust book]: https://rust-embedded.github.io/book/intro/install.html
+[組込みRustブック]: https://rust-embedded.github.io/book/intro/install.html
