@@ -1,23 +1,13 @@
-# Software tasks
+# ソフトウェアタスク
 
-In addition to hardware tasks, which are invoked by the hardware in response to
-hardware events, RTIC also supports *software* tasks which can be spawned by the
-application from any execution context.
+RTICは、ハードウェアのイベントに反応してハードウェアから起動されるハードウェアタスクだけでなく、アプリケーションが任意の実行コンテキストから生成することができる*ソフトウェア*タスクもサポートしています。
 
-Software tasks can also be assigned priorities and, under the hood, are
-dispatched from interrupt handlers. RTIC requires that free interrupts are
-declared in an `extern` block when using software tasks; some of these free
-interrupts will be used to dispatch the software tasks. An advantage of software
-tasks over hardware tasks is that many tasks can be mapped to a single interrupt
-handler.
+ソフトウェアタスクには優先順位を割り当てることもできます。内部的には、割り込みハンドラからディスパッチされます。RTICでは、ソフトウェアタスクを使用する際には、`extern`ブロックで未使用の割り込みを宣言する必要があります。これらの未使用の割り込みがソフトウェアタスクのディスパッチに使用されます。ソフトウェアタスクがハードウェアタスクより優れている点は、多くのタスクを1つの割り込みハンドラにマッピングできることです。
 
-Software tasks are also declared using the `task` attribute but the `binds`
-argument must be omitted. To be able to spawn a software task from a context
-the name of the task must appear in the `spawn` argument of the context
-attribute (`init`, `idle`, `task`, etc.).
+ソフトウェアタスクも`task`属性を使用して宣言されますが、`binds`引数は付けてはなりません。コンテキストからソフトウェア・タスクを生成するには、そのタスクの名前がコンテキスト属性（`init`、`idle`、`task`など）の`spawn`引数に含まれていなければなりません。
 
-The example below showcases three software tasks that run at 2 different
-priorities. The three software tasks are mapped to 2 interrupts handlers.
+以下の例は、2つの異なる優先度で実行される3つのソフトウェアタスクを示しています。3つのソフトウェアタスクは2つの割り込みハンドラにマッピングされています。
+
 
 ``` rust
 {{#include ../../../../examples/task.rs}}
@@ -25,15 +15,14 @@ priorities. The three software tasks are mapped to 2 interrupts handlers.
 
 ``` console
 $ cargo run --example task
-{{#include ../../../../ci/expected/task.run}}```
+{{#include ../../../../ci/expected/task.run}}
+```
 
-## Message passing
+## メッセージパス
 
-The other advantage of software tasks is that messages can be passed to these
-tasks when spawning them. The type of the message payload must be specified in
-the signature of the task handler.
+ソフトウェアタスクのもう一つの利点は、タスクを生成する際にこのタスクにメッセージを渡すことができることです。メッセージペイロードの型はタスクハンドラのシグネチャで指定しなければなりません。
 
-The example below showcases three tasks, two of them expect a message.
+以下の例は、3つのタスクを示しており、そのうちの2つはメッセージを期待しています。
 
 ``` rust
 {{#include ../../../../examples/message.rs}}
@@ -41,21 +30,15 @@ The example below showcases three tasks, two of them expect a message.
 
 ``` console
 $ cargo run --example message
-{{#include ../../../../ci/expected/message.run}}```
+{{#include ../../../../ci/expected/message.run}}
+```
 
-## Capacity
+## キャパシティ
 
-RTIC does *not* perform any form of heap-based memory allocation. The memory
-required to store messages is statically reserved. By default the framework
-minimizes the memory footprint of the application so each task has a message
-"capacity" of 1: meaning that at most one message can be posted to the task
-before it gets a chance to run. This default can be overridden for each task
-using the `capacity` argument. This argument takes a positive integer that
-indicates how many messages the task message buffer can hold.
+RTICはヒープベースのメモリ割り当てはどんな形であれ、行い*ません*。メッセージを保存するために必要なメモリは静的に予約されます。デフォルトでは、フレームワークはアプリケーションのメモリフットプリントを最小化するため、各タスクのメッセージ「キャパシティ」は1です。これはタスクが実行機会を得る前に最大1つのメッセージしか渡すことができないことを意味します。各タスクはこのデフォルトを`capacity`引数を使って上書きすることができます。この引数にはタスクのメッセージバッファが保持できるメッセージ数を示す正の整数を指定します。
 
-The example below sets the capacity of the software task `foo` to 4. If the
-capacity is not specified then the second `spawn.foo` call in `UART0` would
-fail (panic).
+以下の例では、ソフトウェアタスク`foo`のキャパシティを4に設定しています。キャパシティが指定されていなければ、`UART0`の2回目の`spawn.foo`コールは失敗します（パニック）。
+
 
 ``` rust
 {{#include ../../../../examples/capacity.rs}}
@@ -63,32 +46,18 @@ fail (panic).
 
 ``` console
 $ cargo run --example capacity
-{{#include ../../../../ci/expected/capacity.run}}```
+{{#include ../../../../ci/expected/capacity.run}}
+```
 
-## Error handling
+## エラー処理
 
-The `spawn` API returns the `Err` variant when there's no space to send the
-message. In most scenarios spawning errors are handled in one of two ways:
+`spawn` API は、メッセージを送信するスペースがない場合、`Err`バリアントを返します。ほとんどのシナリオで生成されたエラーは次の2つの方法のいずれかで処理されます。
 
-- Panicking, using `unwrap`, `expect`, etc. This approach is used to catch the
-  programmer   error (i.e. bug) of selecting a capacity that was too small. When
-  this panic is encountered during testing choosing a bigger capacity and
-  recompiling the program may fix the issue but sometimes it's necessary to dig
-  deeper and perform a timing analysis of the application to check if the
-  platform can deal with peak payload or if the processor needs to be replaced
-  with a faster one.
+    - `unrawp`や`expect`などを使用してパニックを発生させる。この方法は、小さすぎるキャパシティの選択というプログラマのエラー(つまりバグ)を捕捉するために使用されます。テスト中にこのパニックが発生した場合、より大きなキャパシティを選んでプログラムを再コンパイルすることで問題が解決する場合があります。しかし、時には問題をより深く掘り下げ、プラットフォームがピーク時のペイロードに対応できるか、あるいはプロセッサをより高速なものに交換する必要があるかをチェックするためにアプリケーションのタイミング分析を実行する必要があることもあります。
 
-- Ignoring the result. In soft real-time and non real-time applications it may
-  be OK to occasionally lose data or fail to respond to some events during event
-  bursts. In those scenarios silently letting a `spawn` call fail may be
-  acceptable.
+    - 結果を無視する。ソフトによるリアルタイムアプリケーションや非リアルタイムアプリケーションでは、データを時折失ったり、イベントバースト中にいくつかのイベントへの応答に失敗しても構わない場合があります。このようなシナリオでは、黙って`spawn`コールを失敗させても構わないでしょう。
 
-It should be noted that retrying a `spawn` call is usually the wrong approach as
-this operation will likely never succeed in practice. Because there are only
-context switches towards *higher* priority tasks retrying the `spawn` call of a
-lower priority task will never let the scheduler dispatch said task meaning that
-its message buffer will never be emptied. This situation is depicted in the
-following snippet:
+`spawn`コールの再試行は、通常間違ったアプローチであることに注意してください。実際にこの操作が成功することは決してないからです。なぜなら、より優先度の*高い*タスクへのコンテキストスイッチしかないので、優先度の低いタスクの`spawn`コールを再試行しても、スケジューラがそのタスクをディスパッチさせることはなく、そのメッセージバッファが空になることはないからです。この状況を以下のスニペットで示します。
 
 ``` rust
 #[rtic::app(..)]
