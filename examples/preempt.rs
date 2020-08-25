@@ -4,34 +4,35 @@
 #![no_std]
 
 use cortex_m_semihosting::{debug, hprintln};
-use lm3s6965::Interrupt;
+use stm32f4::stm32f407::Interrupt;
 use panic_semihosting as _;
 use rtic::app;
 
-#[app(device = lm3s6965)]
+// [訳注] stm32f307にはInterrupt::GPIA-CはないのでSPI1-3に変更
+#[app(device = stm32f4::stm32f407)]
 const APP: () = {
     #[init]
     fn init(_: init::Context) {
-        rtic::pend(Interrupt::GPIOA);
+        rtic::pend(Interrupt::SPI1);
     }
 
-    #[task(binds = GPIOA, priority = 1)]
-    fn gpioa(_: gpioa::Context) {
-        hprintln!("GPIOA - start").unwrap();
-        rtic::pend(Interrupt::GPIOC);
-        hprintln!("GPIOA - end").unwrap();
+    #[task(binds = SPI1, priority = 1)]
+    fn spi1(_: spi1::Context) {
+        hprintln!("SPI1 - start").unwrap();
+        rtic::pend(Interrupt::SPI3);
+        hprintln!("SPI1 - end").unwrap();
         debug::exit(debug::EXIT_SUCCESS);
     }
 
-    #[task(binds = GPIOB, priority = 2)]
-    fn gpiob(_: gpiob::Context) {
-        hprintln!(" GPIOB").unwrap();
+    #[task(binds = SPI2, priority = 2)]
+    fn spi2(_: spi2::Context) {
+        hprintln!(" SPI2").unwrap();
     }
 
-    #[task(binds = GPIOC, priority = 2)]
-    fn gpioc(_: gpioc::Context) {
-        hprintln!(" GPIOC - start").unwrap();
-        rtic::pend(Interrupt::GPIOB);
-        hprintln!(" GPIOC - end").unwrap();
+    #[task(binds = SPI3, priority = 2)]
+    fn spi3(_: spi3::Context) {
+        hprintln!(" SPI3 - start").unwrap();
+        rtic::pend(Interrupt::SPI2);
+        hprintln!(" SPI3 - end").unwrap();
     }
 };
