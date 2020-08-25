@@ -12,11 +12,11 @@ use rtic::cyccnt::{Instant, U32Ext};
 const PERIOD: u32 = 8_000_000;
 
 // NOTE: does NOT work on QEMU!
-#[rtic::app(device = lm3s6965, monotonic = rtic::cyccnt::CYCCNT)]
+#[rtic::app(device = stm32f4::stm32f407, monotonic = rtic::cyccnt::CYCCNT)]
 const APP: () = {
     #[init(schedule = [foo])]
     fn init(cx: init::Context) {
-        // omitted: initialization of `CYCCNT`
+        // 削除: `CYCCNT`の初期化
 
         cx.schedule.foo(cx.start + PERIOD.cycles()).unwrap();
     }
@@ -29,10 +29,10 @@ const APP: () = {
         cx.schedule.foo(cx.scheduled + PERIOD.cycles()).unwrap();
     }
 
-    // RTIC requires that unused interrupts are declared in an extern block when
-    // using software tasks; these free interrupts will be used to dispatch the
-    // software tasks.
+    // RTICはソフトウェアタスクを使用する際、未使用の割り込みをexternブロックで
+    // 宣言する必要がある。これらの未使用の割り込みはソフトウェアタスクのディスパッチに
+    // 使用される。
     extern "C" {
-        fn SSI0();
+        fn ETH();
     }
 };
