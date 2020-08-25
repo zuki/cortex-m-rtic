@@ -8,7 +8,7 @@
 use cortex_m_semihosting::{debug, hprintln};
 use panic_semihosting as _;
 
-#[rtic::app(device = lm3s6965)]
+#[rtic::app(device = stm32f4::stm32f407)]
 const APP: () = {
     #[init(spawn = [foo])]
     fn init(c: init::Context) {
@@ -19,15 +19,15 @@ const APP: () = {
     fn foo(c: foo::Context) {
         hprintln!("foo - start").unwrap();
 
-        // spawns `bar` onto the task scheduler
-        // `foo` and `bar` have the same priority so `bar` will not run until
-        // after `foo` terminates
+        // タスクスケジューラに`bar`を生成する
+        // `foo` と `bar` は同じ優先でを持つので
+        // `bar`は`foo`が終了するまで実行しない
         c.spawn.bar().unwrap();
 
         hprintln!("foo - middle").unwrap();
 
-        // spawns `baz` onto the task scheduler
-        // `baz` has higher priority than `foo` so it immediately preempts `foo`
+        // タスクスケジューラに`baz`を生成する
+        // `baz`は`foo`より高い優先度を持つので、直ちに`foo`をプリエンプションする
         c.spawn.baz().unwrap();
 
         hprintln!("foo - end").unwrap();
@@ -45,11 +45,11 @@ const APP: () = {
         hprintln!("baz").unwrap();
     }
 
-    // RTIC requires that unused interrupts are declared in an extern block when
-    // using software tasks; these free interrupts will be used to dispatch the
-    // software tasks.
+    // RTICはソフトウェアタスクを使用する際、未使用の割り込みをexternブロックで
+    // 宣言する必要がある。これらの未使用の割り込みはソフトウェアタスクのディスパッチに
+    // 使用される。
     extern "C" {
-        fn SSI0();
-        fn QEI0();
+        fn ETH();
+        fn CRYP();
     }
 };
