@@ -6,48 +6,48 @@
 #![no_std]
 
 use cortex_m_semihosting::{debug, hprintln};
-use lm3s6965::Interrupt;
+use stm32f4::stm32f407::Interrupt;
 use panic_semihosting as _;
 
-#[rtic::app(device = lm3s6965)]
+#[rtic::app(device = stm32f4::stm32f407)]
 const APP: () = {
     struct Resources {
-        // A resource
+        // リソース
         #[init(0)]
         shared: u32,
     }
 
     #[init]
     fn init(_: init::Context) {
-        rtic::pend(Interrupt::UART0);
-        rtic::pend(Interrupt::UART1);
+        rtic::pend(Interrupt::SPI1);
+        rtic::pend(Interrupt::SPI2);
     }
 
-    // `shared` cannot be accessed from this context
+    // このコンテキストからは`shared`にアクセスできない
     #[idle]
     fn idle(_cx: idle::Context) -> ! {
         debug::exit(debug::EXIT_SUCCESS);
 
-        // error: no `resources` field in `idle::Context`
+        // エラー: `idle::Context`には`resource`フィールドがない
         // _cx.resources.shared += 1;
 
         loop {}
     }
 
-    // `shared` can be accessed from this context
-    #[task(binds = UART0, resources = [shared])]
-    fn uart0(cx: uart0::Context) {
+    // このコンテキストからは`shared`にアクセスできる
+    #[task(binds = SPI1, resources = [shared])]
+    fn spi1(cx: spi1::Context) {
         let shared: &mut u32 = cx.resources.shared;
         *shared += 1;
 
-        hprintln!("UART0: shared = {}", shared).unwrap();
+        hprintln!("SPI1: shared = {}", shared).unwrap();
     }
 
-    // `shared` can be accessed from this context
-    #[task(binds = UART1, resources = [shared])]
-    fn uart1(cx: uart1::Context) {
+    // このコンテキストからは`shared`にアクセスできる
+    #[task(binds = SPI2, resources = [shared])]
+    fn spi2(cx: spi2::Context) {
         *cx.resources.shared += 1;
 
-        hprintln!("UART1: shared = {}", cx.resources.shared).unwrap();
+        hprintln!("SPI2: shared = {}", cx.resources.shared).unwrap();
     }
 };

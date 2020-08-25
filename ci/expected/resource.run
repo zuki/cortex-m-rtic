@@ -1,2 +1,2 @@
-UART0: shared = 1
-UART1: shared = 2
+SPI1: shared = 1
+SPI2: shared = 2
