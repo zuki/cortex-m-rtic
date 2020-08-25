@@ -6,19 +6,19 @@
 #![no_std]
 
 use cortex_m_semihosting::{debug, hprintln};
-use lm3s6965::Interrupt;
+use stm32f4::stm32f407::Interrupt;
 use panic_semihosting as _;
 
-// NOTE: does NOT properly work on QEMU
-#[rtic::app(device = lm3s6965, monotonic = rtic::cyccnt::CYCCNT)]
+// 注意: QEMUでは正しく*動かない*
+#[rtic::app(device = stm32f4::stm32f407, monotonic = rtic::cyccnt::CYCCNT)]
 const APP: () = {
     #[init(spawn = [foo])]
     fn init(cx: init::Context) {
-        // omitted: initialization of `CYCCNT`
+        // 削除: `CYCCNT`の初期化
 
         hprintln!("init(baseline = {:?})", cx.start).unwrap();
 
-        // `foo` inherits the baseline of `init`: `Instant(0)`
+        // `foo`は`init`のベースラインである`Instant(0)`を継承
         cx.spawn.foo().unwrap();
     }
 
@@ -31,24 +31,24 @@ const APP: () = {
         if *ONCE {
             *ONCE = false;
 
-            rtic::pend(Interrupt::UART0);
+            rtic::pend(Interrupt::USART1);
         } else {
             debug::exit(debug::EXIT_SUCCESS);
         }
     }
 
-    #[task(binds = UART0, spawn = [foo])]
-    fn uart0(cx: uart0::Context) {
-        hprintln!("UART0(baseline = {:?})", cx.start).unwrap();
+    #[task(binds = USART1, spawn = [foo])]
+    fn usart1(cx: usart1::Context) {
+        hprintln!("USART1(baseline = {:?})", cx.start).unwrap();
 
-        // `foo` inherits the baseline of `UART0`: its `start` time
+        // `foo`は`USART1`のベースラインである`start`時間を継承
         cx.spawn.foo().unwrap();
     }
 
-    // RTIC requires that unused interrupts are declared in an extern block when
-    // using software tasks; these free interrupts will be used to dispatch the
-    // software tasks.
+    // RTICはソフトウェアタスクを使用する際、未使用の割り込みをexternブロックで
+    // 宣言する必要がある。これらの未使用の割り込みはソフトウェアタスクのディスパッチに
+    // 使用される。
     extern "C" {
-        fn SSI0();
+        fn ETH();
     }
 };
