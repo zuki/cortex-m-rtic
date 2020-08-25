@@ -15,7 +15,7 @@ pub struct NotSend {
     _0: PhantomData<*const ()>,
 }
 
-#[app(device = lm3s6965)]
+#[app(device = stm32f4::stm32f407)]
 const APP: () = {
     struct Resources {
         #[init(None)]
@@ -30,34 +30,34 @@ const APP: () = {
 
     #[task(spawn = [bar])]
     fn foo(c: foo::Context) {
-        // scenario 1: message passed to task that runs at the same priority
+        // シナリオ 1: 同じ優先度で実行しているタスクに渡されるメッセージ
         c.spawn.bar(NotSend { _0: PhantomData }).ok();
     }
 
     #[task]
     fn bar(_: bar::Context, _x: NotSend) {
-        // scenario 1
+        // シナリオ 1
     }
 
     #[task(priority = 2, resources = [shared])]
     fn baz(c: baz::Context) {
-        // scenario 2: resource shared between tasks that run at the same priority
+        // シナリオ 2: 同じ優先度で実行しているタスク間で共有されるリソース
         *c.resources.shared = Some(NotSend { _0: PhantomData });
     }
 
     #[task(priority = 2, resources = [shared])]
     fn quux(c: quux::Context) {
-        // scenario 2
+        // シナリオ 2
         let _not_send = c.resources.shared.take().unwrap();
 
         debug::exit(debug::EXIT_SUCCESS);
     }
 
-    // RTIC requires that unused interrupts are declared in an extern block when
-    // using software tasks; these free interrupts will be used to dispatch the
-    // software tasks.
+    // RTICはソフトウェアタスクを使用する際、未使用の割り込みをexternブロックで
+    // 宣言する必要がある。これらの未使用の割り込みはソフトウェアタスクのディスパッチに
+    // 使用される。
     extern "C" {
-        fn SSI0();
-        fn QEI0();
+        fn ETH();
+        fn CRYP();
     }
 };
