@@ -6,42 +6,43 @@
 #![no_std]
 
 use cortex_m_semihosting::{debug, hprintln};
-use lm3s6965::Interrupt;
+use stm32f4::stm32f407::Interrupt;
 use panic_semihosting as _;
 
-#[rtic::app(device = lm3s6965)]
+#[rtic::app(device = stm32f4::stm32f407)]
 const APP: () = {
     #[init]
     fn init(_: init::Context) {
-        // Pends the UART0 interrupt but its handler won't run until *after*
-        // `init` returns because interrupts are disabled
-        rtic::pend(Interrupt::UART0); // equivalent to NVIC::pend
+        // USART1割り込みを保留におく。ただし、そのハンドラは`init`の
+        // リターン*後*にしか実行しない。割り込みが無効になっているからである。
+        // [訳注] stm32f407にはUART0はないないのでUSART1とした。
+        rtic::pend(Interrupt::USART1); // NVIC::pendに相当する
 
         hprintln!("init").unwrap();
     }
 
     #[idle]
     fn idle(_: idle::Context) -> ! {
-        // interrupts are enabled again; the `UART0` handler runs at this point
+        // 割り込みが再度有効になる。`UART4`ハンドラはこの時点で実行する。
 
         hprintln!("idle").unwrap();
 
-        rtic::pend(Interrupt::UART0);
+        rtic::pend(Interrupt::USART1);
 
         debug::exit(debug::EXIT_SUCCESS);
 
         loop {}
     }
 
-    #[task(binds = UART0)]
-    fn uart0(_: uart0::Context) {
+    #[task(binds = USART1)]
+    fn usart1(_: usart1::Context) {
         static mut TIMES: u32 = 0;
 
-        // Safe access to local `static mut` variable
+        // ローカルの`static mut`変数に安全にアクセスできる
         *TIMES += 1;
 
         hprintln!(
-            "UART0 called {} time{}",
+            "USART1 called {} time{}",
             *TIMES,
             if *TIMES > 1 { "s" } else { "" }
         )
