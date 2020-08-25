@@ -1,4 +1,4 @@
-//! examples/static.rs
+//! examples/only-shared-access.rs
 
 #![deny(unsafe_code)]
 #![deny(warnings)]
@@ -6,10 +6,10 @@
 #![no_std]
 
 use cortex_m_semihosting::{debug, hprintln};
-use lm3s6965::Interrupt;
+use stm32f4::stm32f407::Interrupt;
 use panic_semihosting as _;
 
-#[rtic::app(device = lm3s6965)]
+#[rtic::app(device = stm32f4::stm32f407)]
 const APP: () = {
     struct Resources {
         key: u32,
@@ -17,22 +17,22 @@ const APP: () = {
 
     #[init]
     fn init(_: init::Context) -> init::LateResources {
-        rtic::pend(Interrupt::UART0);
-        rtic::pend(Interrupt::UART1);
+        rtic::pend(Interrupt::SPI1);
+        rtic::pend(Interrupt::SPI2);
 
         init::LateResources { key: 0xdeadbeef }
     }
 
-    #[task(binds = UART0, resources = [&key])]
-    fn uart0(cx: uart0::Context) {
+    #[task(binds = SPI1, resources = [&key])]
+    fn spi1(cx: spi1::Context) {
         let key: &u32 = cx.resources.key;
-        hprintln!("UART0(key = {:#x})", key).unwrap();
+        hprintln!("SPI1(key = {:#x})", key).unwrap();
 
         debug::exit(debug::EXIT_SUCCESS);
     }
 
-    #[task(binds = UART1, priority = 2, resources = [&key])]
-    fn uart1(cx: uart1::Context) {
-        hprintln!("UART1(key = {:#x})", cx.resources.key).unwrap();
+    #[task(binds = SPI2, priority = 2, resources = [&key])]
+    fn spi2(cx: spi2::Context) {
+        hprintln!("SPI2(key = {:#x})", cx.resources.key).unwrap();
     }
 };
