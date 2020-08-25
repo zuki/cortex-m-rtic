@@ -1,4 +1,4 @@
 init
-UART0 called 1 time
+USART1 called 1 time
 idle
-UART0 called 2 times
+USART1 called 2 times

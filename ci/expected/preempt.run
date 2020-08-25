@@ -1,5 +1,5 @@
-GPIOA - start
- GPIOC - start
- GPIOC - end
- GPIOB
-GPIOA - end
+SPI1 - start
+ SPI3 - start
+ SPI3 - end
+ SPI2
+SPI1 - end
