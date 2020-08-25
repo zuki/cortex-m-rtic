@@ -9,7 +9,7 @@ use cortex_m_semihosting::debug;
 use panic_semihosting as _;
 use rtic::cyccnt;
 
-#[rtic::app(device = lm3s6965, peripherals = true, monotonic = rtic::cyccnt::CYCCNT)]
+#[rtic::app(device = stm32f4::stm32f407, peripherals = true, monotonic = rtic::cyccnt::CYCCNT)]
 const APP: () = {
     struct Resources {
         #[init(0)]
@@ -20,7 +20,7 @@ const APP: () = {
     fn init(cx: init::Context) {
         let _: cyccnt::Instant = cx.start;
         let _: rtic::Peripherals = cx.core;
-        let _: lm3s6965::Peripherals = cx.device;
+        let _: stm32f4::stm32f407::Peripherals = cx.device;
         let _: init::Schedule = cx.schedule;
         let _: init::Spawn = cx.spawn;
 
@@ -35,12 +35,12 @@ const APP: () = {
         loop {}
     }
 
-    #[task(binds = UART0, resources = [shared], schedule = [foo], spawn = [foo])]
-    fn uart0(cx: uart0::Context) {
+    #[task(binds = USART1, resources = [shared], schedule = [foo], spawn = [foo])]
+    fn usart1(cx: usart1::Context) {
         let _: cyccnt::Instant = cx.start;
         let _: resources::shared = cx.resources.shared;
-        let _: uart0::Schedule = cx.schedule;
-        let _: uart0::Spawn = cx.spawn;
+        let _: usart1::Schedule = cx.schedule;
+        let _: usart1::Spawn = cx.spawn;
     }
 
     #[task(priority = 2, resources = [shared], schedule = [foo], spawn = [foo])]
@@ -52,10 +52,10 @@ const APP: () = {
         let _: foo::Spawn = cx.spawn;
     }
 
-    // RTIC requires that unused interrupts are declared in an extern block when
-    // using software tasks; these free interrupts will be used to dispatch the
-    // software tasks.
+    // RTICはソフトウェアタスクを使用する際、未使用の割り込みをexternブロックで
+    // 宣言する必要がある。これらの未使用の割り込みはソフトウェアタスクのディスパッチに
+    // 使用される。
     extern "C" {
-        fn SSI0();
+        fn ETH();
     }
 };

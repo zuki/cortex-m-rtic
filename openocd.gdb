@@ -16,6 +16,7 @@ set backtrace limit 32
 #break main
 
 #break sdmmc.rs:396
+#break types.rs:27
 
 monitor arm semihosting enable
 
