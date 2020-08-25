@@ -6,18 +6,18 @@
 #![no_std]
 
 use cortex_m_semihosting::{debug, hprintln};
-use lm3s6965::Interrupt;
+use stm32f4::stm32f407::Interrupt;
 use panic_semihosting as _;
 
-#[rtic::app(device = lm3s6965)]
+#[rtic::app(device = stm32f4::stm32f407)]
 const APP: () = {
     #[init]
     fn init(_: init::Context) {
-        rtic::pend(Interrupt::UART0);
+        rtic::pend(Interrupt::USART1);
     }
 
-    #[task(binds = UART0, spawn = [foo, bar])]
-    fn uart0(c: uart0::Context) {
+    #[task(binds = USART1, spawn = [foo, bar])]
+    fn usart1(c: usart1::Context) {
         c.spawn.foo(0).unwrap();
         c.spawn.foo(1).unwrap();
         c.spawn.foo(2).unwrap();
@@ -38,10 +38,10 @@ const APP: () = {
         debug::exit(debug::EXIT_SUCCESS);
     }
 
-    // RTIC requires that unused interrupts are declared in an extern block when
-    // using software tasks; these free interrupts will be used to dispatch the
-    // software tasks.
+    // RTICはソフトウェアタスクを使用する際、未使用の割り込みをexternブロックで
+    // 宣言する必要がある。これらの未使用の割り込みはソフトウェアタスクのディスパッチに
+    // 使用される。
     extern "C" {
-        fn SSI0();
+        fn ETH();
     }
 };
