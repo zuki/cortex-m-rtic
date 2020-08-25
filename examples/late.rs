@@ -39,6 +39,7 @@ const APP: () = {
                 hprintln!("received message: {}", byte).unwrap();
 
                 debug::exit(debug::EXIT_SUCCESS);
+                loop {}     // 実機ではdebug::exit()では止まらない
             } else {
                 rtic::pend(Interrupt::USART1);
             }
