@@ -6,13 +6,13 @@
 #![no_std]
 
 use cortex_m_semihosting::debug;
-use lm3s6965::Interrupt;
+use stm32f4::stm32f407::Interrupt;
 use panic_halt as _;
 use rtic::app;
 
 pub struct MustBeSend;
 
-#[app(device = lm3s6965)]
+#[app(device = stm32f4::stm32f407)]
 const APP: () = {
     struct Resources {
         #[init(None)]
@@ -21,17 +21,17 @@ const APP: () = {
 
     #[init(resources = [shared])]
     fn init(c: init::Context) {
-        // this `message` will be sent to task `UART0`
+        // この`message`は`USART1`に送られる
         let message = MustBeSend;
         *c.resources.shared = Some(message);
 
-        rtic::pend(Interrupt::UART0);
+        rtic::pend(Interrupt::USART1);
     }
 
-    #[task(binds = UART0, resources = [shared])]
-    fn uart0(c: uart0::Context) {
+    #[task(binds = USART1, resources = [shared])]
+    fn usart1(c: usart1::Context) {
         if let Some(message) = c.resources.shared.take() {
-            // `message` has been received
+            // `message`を受け取った
             drop(message);
 
             debug::exit(debug::EXIT_SUCCESS);
