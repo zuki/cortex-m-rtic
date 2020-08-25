@@ -11,26 +11,27 @@ use panic_halt as _;
 use rtic::cyccnt::{Instant, U32Ext as _};
 
 // NOTE: does NOT work on QEMU!
-#[rtic::app(device = lm3s6965, monotonic = rtic::cyccnt::CYCCNT)]
+#[rtic::app(device = stm32f4::stm32f407, monotonic = rtic::cyccnt::CYCCNT)]
 const APP: () = {
     #[init(schedule = [foo, bar])]
     fn init(mut cx: init::Context) {
-        // Initialize (enable) the monotonic timer (CYCCNT)
+        // モノトニックタイマー(CCYCNT)を初期化（有効化）
         cx.core.DCB.enable_trace();
-        // required on Cortex-M7 devices that software lock the DWT (e.g. STM32F7)
+        // ソフトウェアがDWTをロックするCortex-M7デバイスで必要（STM32F7など）
         DWT::unlock();
         cx.core.DWT.enable_cycle_counter();
 
-        // semantically, the monotonic timer is frozen at time "zero" during `init`
-        // NOTE do *not* call `Instant::now` in this context; it will return a nonsense value
-        let now = cx.start; // the start time of the system
+        // 意味的には、モノトニックタイマーは `init` の間、時間 "0" でフリーズします。
+        // 注意: このコンテキストでは`Instant::now`をコールしては*いけません*。
+        // もしした場合は、意味のない値が返ります。
+        let now = cx.start; // システムの開始時間
 
         hprintln!("init @ {:?}", now).unwrap();
 
-        // Schedule `foo` to run 8e6 cycles (clock cycles) in the future
+        // `foo`を8e6サイクル（クロックサイクル）後に実行するようスケジュール
         cx.schedule.foo(now + 8_000_000.cycles()).unwrap();
 
-        // Schedule `bar` to run 4e6 cycles in the future
+        // `bar`を4e6サイクル（クロックサイクル）後に実行するようスケジュール
         cx.schedule.bar(now + 4_000_000.cycles()).unwrap();
     }
 
@@ -44,10 +45,10 @@ const APP: () = {
         hprintln!("bar  @ {:?}", Instant::now()).unwrap();
     }
 
-    // RTIC requires that unused interrupts are declared in an extern block when
-    // using software tasks; these free interrupts will be used to dispatch the
-    // software tasks.
+    // RTICはソフトウェアタスクを使用する際、未使用の割り込みをexternブロックで
+    // 宣言する必要がある。これらの未使用の割り込みはソフトウェアタスクのディスパッチに
+    // 使用される。
     extern "C" {
-        fn SSI0();
+        fn ETH();
     }
 };
