@@ -8,11 +8,11 @@
 use cortex_m_semihosting::{debug, hprintln};
 use panic_semihosting as _;
 
-#[rtic::app(device = lm3s6965)]
+#[rtic::app(device = stm32f4::stm32f407)]
 const APP: () = {
     #[init(spawn = [foo])]
     fn init(c: init::Context) {
-        c.spawn.foo(/* no message */).unwrap();
+        c.spawn.foo(/* メッセージなし */).unwrap();
     }
 
     #[task(spawn = [bar])]
@@ -38,15 +38,16 @@ const APP: () = {
 
         if x + y > 4 {
             debug::exit(debug::EXIT_SUCCESS);
+            loop {}     // 実機ではdebug::exit()では止まらない
         }
 
         c.spawn.foo().unwrap();
     }
 
-    // RTIC requires that unused interrupts are declared in an extern block when
-    // using software tasks; these free interrupts will be used to dispatch the
-    // software tasks.
+    // RTICはソフトウェアタスクを使用する際、未使用の割り込みをexternブロックで
+    // 宣言する必要がある。これらの未使用の割り込みはソフトウェアタスクのディスパッチに
+    // 使用される。
     extern "C" {
-        fn SSI0();
+        fn ETH();
     }
 };
