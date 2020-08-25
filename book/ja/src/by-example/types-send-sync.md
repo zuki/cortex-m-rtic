@@ -1,53 +1,38 @@
-# Types, Send and Sync
+# 型、SendとSync
 
-Every function within the `APP` pseudo-module has a `Context` structure as its
-first parameter. All the fields of these structures have predictable,
-non-anonymous types so you can write plain functions that take them as arguments.
+`APP`擬似モジュール内のすべての関数は、その最初のパラメータとして`Context`構造体を持ちます。これらの構造体のすべてのフィールドは予測可能で非匿名な型を持っていますので、それらを引数とするプレーンな関数を書くことができます。
 
-The API reference specifies how these types are generated from the input. You
-can also generate documentation for you binary crate (`cargo doc --bin <name>`);
-in the documentation you'll find `Context` structs (e.g. `init::Context` and
-`idle::Context`).
+APIリファレンスはこれらの型が入力からどのように生成されるかを明記しています。バイナリクレートのドキュメントを生成することもできます (`cargo doc --bin <name>`)。ドキュメントの中で`Context`構造体（`init::Context`や`idle::Context`など）を見つけることができるでしょう。
 
-The example below shows the different types generates by the `app` attribute.
+以下の例は、`app`属性によって生成される様々なタイプを示しています。
 
-``` rust
+``` **rust**
 {{#include ../../../../examples/types.rs}}
+```
+
+### `Context`構造体のフィールドの型の例
+
+```rust
+{{#rustdoc_include ../../../../memos/memo_1_5.rs:1:10}}
 ```
 
 ## `Send`
 
-[`Send`] is a marker trait for "types that can be transferred across thread
-boundaries", according to its definition in `core`. In the context of RTIC the
-`Send` trait is only required where it's possible to transfer a value between
-tasks that run at *different* priorities. This occurs in a few places: in
-message passing, in shared resources and in the initialization of late
-resources.
+[`Send`]は、`core`における定義によると「スレッド境界を越えて転送できる型」のためのマーカートレイトです。RTICのコンテキストでは、*異なる*優先度で実行するタスク間で値を転送することが可能な場合にのみ`Send`トレイトが必要となります。これはメッセージパッシング、共有リソース、遅延リソースの初期化など、いくつかの場所で発生します。
 
 [`Send`]: https://doc.rust-lang.org/core/marker/trait.Send.html
 
-The `app` attribute will enforce that `Send` is implemented where required so
-you don't need to worry much about it. It's more important to know where you do
-*not* need the `Send` trait: on types that are transferred between tasks that
-run at the *same* priority. This occurs in two places: in message passing and in
-shared resources.
+`app`属性は必要な場所に`Send`が実装されていることを強制しますので、あまり気にする必要はありません。`Send`トレイトを必要と*しない*場所を知っておくことの方が重要です。すなわち、*同じ*優先度で実行するタスク間で転送される型です。これはメッセージの受け渡しと共有リソースの２箇所で発生します。
 
-The example below shows where a type that doesn't implement `Send` can be used.
+以下の例では、`Send`を実装していない型を使用できる場所を示しています。
 
 ``` rust
 {{#include ../../../../examples/not-send.rs}}
 ```
 
-It's important to note that late initialization of resources is effectively a
-send operation where the initial value is sent from the background context,
-which has the lowest priority of `0`, to a task, which will run at a priority
-greater than or equal to `1`. Thus all late resources need to implement the
-`Send` trait, except for those exclusively accessed by `idle`, which runs at a
-priority of `0`.
+ここで、リソースの遅延初期化は、最も低い優先度`0`のバックグラウンドコンテキストから`1`以上の優先度で実行するタスクに初期値を送信する操作であることに注意することが重要です。したがって、すべての遅延リソースは、優先度`0`で実行する`idle`により排他的にアクセスされるものを除いて、`Send`トレイトを実装する必要があります。
 
-Sharing a resource with `init` can be used to implement late initialization, see
-example below. For that reason, resources shared with `init` must also implement
-the `Send` trait.
+次の例でからわかるように、`init`とのリソースの共有を遅延初期化の実装に使用することができます。そのため、`init`と共有するリソースも`Send`トレイトを実装しなければなりません。
 
 ``` rust
 {{#include ../../../../examples/shared-with-init.rs}}
@@ -55,19 +40,13 @@ the `Send` trait.
 
 ## `Sync`
 
-Similarly, [`Sync`] is a marker trait for "types for which it is safe to share
-references between threads", according to its definition in `core`. In the
-context of RTIC the `Sync` trait is only required where it's possible for two,
-or more, tasks that run at different priorities and may get a shared reference
-(`&-`) to a resource. This only occurs with shared access (`&-`) resources.
+同様に、[`Sync`]はコアの定義によると「スレッド間で参照を共有しても安全な型」のためのマーカートレイトです。RTIC のコンテキストでは、異なる優先度で実行する2つ以上のタスクが、あるリソースへの共有参照 (`&-`) を取得できる場合のみ`Sync`トレイトが必要となります。これは共有アクセス(`&-`)リソースでのみ発生します。
 
 [`Sync`]: https://doc.rust-lang.org/core/marker/trait.Sync.html
 
-The `app` attribute will enforce that `Sync` is implemented where required but
-it's important to know where the `Sync` bound is not required: shared access
-(`&-`) resources contended by tasks that run at the *same* priority.
+`app`属性は属性は必要な場所に`Sync`が実装されていることを強制しますが、`Sync`が必要とされない場所、すなわち、*同じ*優先度で実行するタスクが競合する共有アクセス(`&-`)リソースを知っておくことが重要です。
 
-The example below shows where a type that doesn't implement `Sync` can be used.
+以下の例では、`Sync`を実装していない型を使用できる場所を示しています。
 
 ``` rust
 {{#include ../../../../examples/not-sync.rs}}
