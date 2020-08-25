@@ -11,12 +11,12 @@ use heapless::{
     i,
     spsc::{Consumer, Producer, Queue},
 };
-use lm3s6965::Interrupt;
+use stm32f4::stm32f407::Interrupt;
 use panic_semihosting as _;
 
-#[rtic::app(device = lm3s6965)]
+#[rtic::app(device = stm32f4::stm32f407)]
 const APP: () = {
-    // Late resources
+    // 遅延リソース
     struct Resources {
         p: Producer<'static, u32, U4>,
         c: Consumer<'static, u32, U4>,
@@ -28,7 +28,7 @@ const APP: () = {
 
         let (p, c) = Q.split();
 
-        // Initialization of late resources
+        // 遅延リソースの初期化
         init::LateResources { p, c }
     }
 
@@ -40,13 +40,13 @@ const APP: () = {
 
                 debug::exit(debug::EXIT_SUCCESS);
             } else {
-                rtic::pend(Interrupt::UART0);
+                rtic::pend(Interrupt::USART1);
             }
         }
     }
 
-    #[task(binds = UART0, resources = [p])]
-    fn uart0(c: uart0::Context) {
+    #[task(binds = USART1, resources = [p])]
+    fn usart1(c: usart1::Context) {
         c.resources.p.enqueue(42).unwrap();
     }
 };
