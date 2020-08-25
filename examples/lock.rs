@@ -6,10 +6,10 @@
 #![no_std]
 
 use cortex_m_semihosting::{debug, hprintln};
-use lm3s6965::Interrupt;
+use stm32f4::stm32f407::Interrupt;
 use panic_semihosting as _;
 
-#[rtic::app(device = lm3s6965)]
+#[rtic::app(device = stm32f4::stm32f407)]
 const APP: () = {
     struct Resources {
         #[init(0)]
@@ -18,45 +18,45 @@ const APP: () = {
 
     #[init]
     fn init(_: init::Context) {
-        rtic::pend(Interrupt::GPIOA);
+        rtic::pend(Interrupt::SPI1);
     }
 
-    // when omitted priority is assumed to be `1`
-    #[task(binds = GPIOA, resources = [shared])]
-    fn gpioa(mut c: gpioa::Context) {
+    // 優先度の指定がない場合は`1`が仮定される
+    #[task(binds = SPI1, resources = [shared])]
+    fn spi1(mut c: spi1::Context) {
         hprintln!("A").unwrap();
 
-        // the lower priority task requires a critical section to access the data
+        // 優先度の低いタスクはデータのアクセスにクリティカルセクションを必要とする
         c.resources.shared.lock(|shared| {
-            // data can only be modified within this critical section (closure)
+            // データはこのクリティカルセクション内においてのみ変更できる（クロージャ）
             *shared += 1;
 
-            // GPIOB will *not* run right now due to the critical section
-            rtic::pend(Interrupt::GPIOB);
+            // クリティカルセクション内であるのでSPI2は直ちに実行*できない*
+            rtic::pend(Interrupt::SPI2);
 
             hprintln!("B - shared = {}", *shared).unwrap();
 
-            // GPIOC does not contend for `shared` so it's allowed to run now
-            rtic::pend(Interrupt::GPIOC);
+            // SPI3は`shared`を争っていないので、今すぐ実行できる
+            rtic::pend(Interrupt::SPI3);
         });
 
-        // critical section is over: GPIOB can now start
+        // クリティカルセクションを抜けた。ここでSPI2は開始できる
 
         hprintln!("E").unwrap();
 
         debug::exit(debug::EXIT_SUCCESS);
     }
 
-    #[task(binds = GPIOB, priority = 2, resources = [shared])]
-    fn gpiob(c: gpiob::Context) {
-        // the higher priority task does *not* need a critical section
+    #[task(binds = SPI2, priority = 2, resources = [shared])]
+    fn spi2(c: spi2::Context) {
+        // 高い優先度を持つタスクはクリティカルセクションを必要と*しない*
         *c.resources.shared += 1;
 
         hprintln!("D - shared = {}", *c.resources.shared).unwrap();
     }
 
-    #[task(binds = GPIOC, priority = 3)]
-    fn gpioc(_: gpioc::Context) {
+    #[task(binds = SPI3, priority = 3)]
+    fn spi3(_: spi3::Context) {
         hprintln!("C").unwrap();
     }
 };
