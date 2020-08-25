@@ -14,7 +14,7 @@ pub struct NotSync {
     _0: PhantomData<*const ()>,
 }
 
-#[rtic::app(device = lm3s6965)]
+#[rtic::app(device = stm32f4::stm32f407)]
 const APP: () = {
     struct Resources {
         #[init(NotSync { _0: PhantomData })]
@@ -36,10 +36,10 @@ const APP: () = {
         let _: &NotSync = c.resources.shared;
     }
 
-    // RTIC requires that unused interrupts are declared in an extern block when
-    // using software tasks; these free interrupts will be used to dispatch the
-    // software tasks.
+    // RTICはソフトウェアタスクを使用する際、未使用の割り込みをexternブロックで
+    // 宣言する必要がある。これらの未使用の割り込みはソフトウェアタスクのディスパッチに
+    // 使用される。
     extern "C" {
-        fn SSI0();
+        fn ETH();
     }
 };
