@@ -10,34 +10,34 @@ use heapless::{
     pool,
     pool::singleton::{Box, Pool},
 };
-use lm3s6965::Interrupt;
+use stm32f4::stm32f407::Interrupt;
 use panic_semihosting as _;
 use rtic::app;
 
-// Declare a pool of 128-byte memory blocks
+// 128バイトのメモリブロックのプールを宣言する
 pool!(P: [u8; 128]);
 
-#[app(device = lm3s6965)]
+#[app(device = stm32f4::stm32f407)]
 const APP: () = {
     #[init]
     fn init(_: init::Context) {
         static mut MEMORY: [u8; 512] = [0; 512];
 
-        // Increase the capacity of the memory pool by ~4
+        // メモリプールの容量を4倍に増加させる
         P::grow(MEMORY);
 
-        rtic::pend(Interrupt::I2C0);
+        rtic::pend(Interrupt::SPI1);
     }
 
-    #[task(binds = I2C0, priority = 2, spawn = [foo, bar])]
-    fn i2c0(c: i2c0::Context) {
-        // claim a memory block, leave it uninitialized and ..
+    #[task(binds = SPI1, priority = 2, spawn = [foo, bar])]
+    fn spi1(c: spi1::Context) {
+        // メモリブロックを要求し、初期化はしない
         let x = P::alloc().unwrap().freeze();
 
-        // .. send it to the `foo` task
+        // タスク`foo`にブロックを送信
         c.spawn.foo(x).ok().unwrap();
 
-        // send another block to the task `bar`
+        // タスク`bar`に別のブロックを送信
         c.spawn.bar(P::alloc().unwrap().freeze()).ok().unwrap();
     }
 
@@ -45,7 +45,7 @@ const APP: () = {
     fn foo(_: foo::Context, x: Box<P>) {
         hprintln!("foo({:?})", x.as_ptr()).unwrap();
 
-        // explicitly return the block to the pool
+        // 明示的にブロックをプールに返す
         drop(x);
 
         debug::exit(debug::EXIT_SUCCESS);
@@ -55,15 +55,15 @@ const APP: () = {
     fn bar(_: bar::Context, x: Box<P>) {
         hprintln!("bar({:?})", x.as_ptr()).unwrap();
 
-        // this is done automatically so we can omit the call to `drop`
+        // これは自動的に行われるため、`drop`の呼び出しは削除できる
         // drop(x);
     }
 
-    // RTIC requires that unused interrupts are declared in an extern block when
-    // using software tasks; these free interrupts will be used to dispatch the
-    // software tasks.
+    // RTICはソフトウェアタスクを使用する際、未使用の割り込みをexternブロックで
+    // 宣言する必要がある。これらの未使用の割り込みはソフトウェアタスクのディスパッチに
+    // 使用される。
     extern "C" {
-        fn SSI0();
-        fn QEI0();
+        fn ETH();
+        fn CRYP();
     }
 };
