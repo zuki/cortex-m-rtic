@@ -1,20 +1,10 @@
-# Tips & tricks
+# ヒントとコツ
 
-## Generics
+## ジェネリクス
 
-Resources may appear in contexts as resource proxies or as unique references
-(`&mut-`) depending on the priority of the task. Because the same resource may
-appear as *different* types in different contexts one cannot refactor a common
-operation that uses resources into a plain function; however, such refactor is
-possible using *generics*.
+リソースは、タスクの優先度に応じて、リソースプロキシまたはユニーク参照（`&mut-`）としてコンテキストに現れることがあります。同じリソースが異なるコンテキストで*異なる*型として現れることがあるため、リソースを使用する共通な操作をプレーンな関数にリファクタリングすることはできません。しかし、*ジェネリック*を使用することでそのようなリファクタリングは可能です。
 
-All resource proxies implement the `rtic::Mutex` trait. On the other hand,
-unique references (`&mut-`) do *not* implement this trait (due to limitations in
-the trait system) but one can wrap these references in the [`rtic::Exclusive`]
-newtype which does implement the `Mutex` trait. With the help of this newtype
-one can write a generic function that operates on generic resources and call it
-from different tasks to perform some operation on the same set of resources.
-Here's one such example:
+すべてのリソースプロキシは`rtic::Mutex`トレイトを実装しています。一方、ユニーク参照（`&mut-`）は（トレイトシステムの制限のため）このトレイトを実装していません。しかし、これらの参照を`Mutex`トレイトを実装している新たな型[`rtic::Exclusive`]でラップすることができます。この新たなた型の助けを借りることで、リソース全般を操作する汎用関数を書くことができ、これを異なるタスクから呼び出して、同一のリソースセットに対して何らかの操作を実行することができます。以下にそのような例を示します。
 
 [`rtic::Exclusive`]: ../../../api/rtic/struct.Exclusive.html
 
@@ -24,20 +14,17 @@ Here's one such example:
 
 ``` console
 $ cargo run --example generics
-{{#include ../../../../ci/expected/generics.run}}```
+{{#include ../../../../ci/expected/generics.run}}
+```
 
-Using generics also lets you change the static priorities of tasks during
-development without having to rewrite a bunch code every time.
+また、ジェネリックを使用することで、都度大量のコードを書き換えることなく開発中のタスクの静的な優先順位を変更することができます。
 
-## Conditional compilation
 
-You can use conditional compilation (`#[cfg]`) on resources (the fields of
-`struct Resources`) and tasks (the `fn` items). The effect of using `#[cfg]`
-attributes is that the resource / task will *not* be available through the
-corresponding `Context` `struct` if the condition doesn't hold.
+## 条件付きコンパイル
 
-The example below logs a message whenever the `foo` task is spawned, but only if
-the program has been compiled using the `dev` profile.
+リソース（`struct Resources`のフィールド）とタスク（`fn`アイテム）に対して条件付きコンパイル（`#[cfg]`）を使用することができます。`[cfg] `属性を使用する効果は、条件が満たされないと対応する`Context`  `struct`からリソースやタスクが利用できなくなることです。
+
+以下の例では、`foo`タスクがスポーンされるたびにメッセージを出力しますが、それはプログラムが`dev`プロファイルを使ってコンパイルされた場合に限ります。
 
 ``` rust
 {{#include ../../../../examples/cfg.rs}}
@@ -47,87 +34,85 @@ the program has been compiled using the `dev` profile.
 $ cargo run --example cfg --release
 
 $ cargo run --example cfg
-{{#include ../../../../ci/expected/cfg.run}}```
+{{#include ../../../../ci/expected/cfg.run}}
+```
 
-## Running tasks from RAM
+## RAMからタスクを実行する
 
-The main goal of moving the specification of RTIC applications to attributes in
-RTIC v0.4.0 was to allow inter-operation with other attributes. For example, the
-`link_section` attribute can be applied to tasks to place them in RAM; this can
-improve performance in some cases.
+RTIC v0.4.0でRTICアプリケーションの仕様を属性に移行した主な目的は、他の属性との相互運用を可能にすることでした。たとえば、`link_section`属性はタスクに適用することでタスクをRAMに配置することができます。
 
-> **IMPORTANT**: In general, the `link_section`, `export_name` and `no_mangle`
-> attributes are very powerful but also easy to misuse. Incorrectly using any of
-> these attributes can cause undefined behavior; you should always prefer to use
-> safe, higher level attributes around them like `cortex-m-rt`'s `interrupt` and
-> `exception` attributes.
+> 重要: 一般的に、`link_section`、`export_name`、`no_mangle`の各属性は非常に
+> 強力ですが、誤用しやすい属性でもあります。これらの属性を誤用すると、未定義動作を
+> 引き起こす可能性があります。これらの属性の使用は避け、`cortex-m-rt` の
+> `interrupt`や`exception`属性のような、安全な上位レベルの属性を常に使用するように
+> してください。
 >
-> In the particular case of RAM functions there's no
-> safe abstraction for it in `cortex-m-rt` v0.6.5 but there's an [RFC] for
-> adding a `ramfunc` attribute in a future release.
+> RAM関数のような特別な場合には、`Cortex-m-rt` v0.6.5にそれに合った安全な抽象化は
+> ありませんが、将来のリリースで`ramfunc`属性を追加するための[RFC]があります。
 
 [RFC]: https://github.com/rust-embedded/cortex-m-rt/pull/100
 
-The example below shows how to place the higher priority task, `bar`, in RAM.
+以下の例は、優先度の高いタスク`bar`をRAMに配置する方法を示しています。
 
 ``` rust
 {{#include ../../../../examples/ramfunc.rs}}
 ```
 
-Running this program produces the expected output.
+このプログラムを実行すると期待した出力が得られる。
 
 ``` console
 $ cargo run --example ramfunc
-{{#include ../../../../ci/expected/ramfunc.run}}```
+{{#include ../../../../ci/expected/ramfunc.run}}
+```
 
-One can look at the output of `cargo-nm` to confirm that `bar` ended in RAM
-(`0x2000_0000`), whereas `foo` ended in Flash (`0x0000_0000`).
+One can look at the output of `cargo-nm`の出力を見ると、`bar`がRAM
+（`0x2000_0000`）に、`foo`がFlash（`0x0000_0000`）にあることが確認できます。
 
 ``` console
-$ cargo nm --example ramfunc --release | grep ' foo::'
+$ cargo nm --example ramfunc --release | grep ' ramfunc::foo::'
 {{#include ../../../../ci/expected/ramfunc.grep.foo}}
 ```
 
 ``` console
-$ cargo nm --example ramfunc --release | grep ' bar::'
+$ cargo nm --example ramfunc --release | grep ' ramfunc::bar::'
 {{#include ../../../../ci/expected/ramfunc.grep.bar}}
 ```
 
-## Indirection for faster message passing
+## より高速なメッセージ渡しのための間接渡し
 
-Message passing always involves copying the payload from the sender into a
-static variable and then from the static variable into the receiver. Thus
-sending a large buffer, like a `[u8; 128]`, as a message involves two expensive
-`memcpy`s. To minimize the message passing overhead one can use indirection:
-instead of sending the buffer by value, one can send an owning pointer into the
-buffer.
+メッセージの受け渡しでは、常にペイロードのコピーが、送信側からスタティック変数へ、
+さらに、スタティック変数から受信側へと行われます。したがって、`[u8; 128]`のような
+大きなバッファをメッセージとして送信すると高価な`memocpy`が2回行われることになります。
+メッセージ渡しのオーバーヘッドを最小限にするには、値でバッファを送信する代わりに、
+バッファの所有ポインタを送信する間接渡しを使用することができます。
 
-One can use a global allocator to achieve indirection (`alloc::Box`,
-`alloc::Rc`, etc.), which requires using the nightly channel as of Rust v1.37.0,
-or one can use a statically allocated memory pool like [`heapless::Pool`].
+間接渡しを実現するためには（`alloc::Box`や`alloc::Rc`などの）グローバル
+アロケータ(alloc::Box, alloc::Rcなど)を使用することができますが、これには
+Rust v1.37.0のnightlyチャネルの使用が必要です。そうでなければ、[`heapless::Pool`]
+のような静的にアロケートするメモリプールを使用することができます。
 
 [`heapless::Pool`]: https://docs.rs/heapless/0.5.0/heapless/pool/index.html
 
-Here's an example where `heapless::Pool` is used to "box" buffers of 128 bytes.
+ここでは、`heapless::Pool`を使用して 128バイトの「ボックス」バッファを使用する例を示します。
 
 ``` rust
 {{#include ../../../../examples/pool.rs}}
 ```
 ``` console
 $ cargo run --example pool
-{{#include ../../../../ci/expected/pool.run}}```
+{{#include ../../../../ci/expected/pool.run}}
+```
 
-## Inspecting the expanded code
+## 展開されたコードを調べる
 
-`#[rtic::app]` is a procedural macro that produces support code. If for some
-reason you need to inspect the code generated by this macro you have two
-options:
+`#[rtic::app]`は、サポートコードを生成する手続き型マクロです。何らかの理由で
+このマクロによって生成されたコードを調べる必要がある場合、2つのオプションがあります。
 
-You can inspect the file `rtic-expansion.rs` inside the `target` directory. This
-file contains the expansion of the `#[rtic::app]` item (not your whole program!)
-of the *last built* (via `cargo build` or `cargo check`) RTIC application. The
-expanded code is not pretty printed by default so you'll want to run `rustfmt`
-over it before you read it.
+`target`ディレクトリにあるファイル`rtic-expansion.rs`を調べることができます。
+このファイルには、（`cargo build`または`cargo check`経由で）*最後にビルドされた
+*RTICアプリケーションの`#[rtic::app]`アイテム（プログラム全体ではありません！）が
+展開されたコードが含まれています。展開されたコードはデフォルトではプリティプリント
+されていませんので、コードを読む前には`rustfmt`を実行すると良いでしょう。
 
 ``` console
 $ cargo build --example foo
@@ -155,21 +140,21 @@ const APP: () = {
 };
 ```
 
-Or, you can use the [`cargo-expand`] sub-command. This sub-command will expand
-*all* the macros, including the `#[rtic::app]` attribute, and modules in your
-crate and print the output to the console.
+または、`cargo-expand`サブコマンドを使用することができます。このサブコマンドは、
+`#[rtic::app]`属性を含む*すべての*マクロとクレート内のモジュールを展開し、
+コンソールに出力します。
 
 [`cargo-expand`]: https://crates.io/crates/cargo-expand
 
 ``` console
-$ # produces the same output as before
+$ # 先と同じ出力を出力する
 $ cargo expand --example smallest | tail
 ```
 
-## Resource de-structure-ing
+## リソース構造体の分割
 
-When having a task taking multiple resources it can help in readability to split
-up the resource struct. Here are two examples on how this can be done:
+複数のリソースを取るタスクがある場合、リソース構造体を分割することが可読性の向上に
+役立ちます。これを行う方法について、2つの例を紹介します。
 
 ``` rust
 {{#include ../../../../examples/destructure.rs}}
