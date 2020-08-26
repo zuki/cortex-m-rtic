@@ -10,10 +10,10 @@ use cortex_m_semihosting::debug;
 use cortex_m_semihosting::hprintln;
 use panic_semihosting as _;
 
-#[rtic::app(device = lm3s6965)]
+#[rtic::app(device = stm32f4::stm32f407)]
 const APP: () = {
     struct Resources {
-        #[cfg(debug_assertions)] // <- `true` when using the `dev` profile
+        #[cfg(debug_assertions)] // <- `dev`プロファイルを使った場合に`true`
         #[init(0)]
         count: u32,
     }
@@ -40,7 +40,7 @@ const APP: () = {
             _cx.spawn.log(*_cx.resources.count).unwrap();
         }
 
-        // this wouldn't compile in `release` mode
+        // 次は`release`モードではコンパイルできない（コンパイルエラー）
         // *_cx.resources.count += 1;
 
         // ..
@@ -57,11 +57,11 @@ const APP: () = {
         .ok();
     }
 
-    // RTIC requires that unused interrupts are declared in an extern block when
-    // using software tasks; these free interrupts will be used to dispatch the
-    // software tasks.
+    // RTICはソフトウェアタスクを使用する際、未使用の割り込みをexternブロックで
+    // 宣言する必要がある。これらの未使用の割り込みはソフトウェアタスクのディスパッチに
+    // 使用される。
     extern "C" {
-        fn SSI0();
-        fn QEI0();
+        fn ETH();
+        fn CRYP();
     }
 };
