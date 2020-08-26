@@ -6,11 +6,11 @@
 #![no_std]
 
 use cortex_m_semihosting::{debug, hprintln};
-use lm3s6965::Interrupt;
+use stm32f4::stm32f407::Interrupt;
 use panic_semihosting as _;
 use rtic::{Exclusive, Mutex};
 
-#[rtic::app(device = lm3s6965)]
+#[rtic::app(device = stm32f4::stm32f407)]
 const APP: () = {
     struct Resources {
         #[init(0)]
@@ -19,39 +19,39 @@ const APP: () = {
 
     #[init]
     fn init(_: init::Context) {
-        rtic::pend(Interrupt::UART0);
-        rtic::pend(Interrupt::UART1);
+        rtic::pend(Interrupt::SPI1);
+        rtic::pend(Interrupt::SPI2);
     }
 
-    #[task(binds = UART0, resources = [shared])]
-    fn uart0(c: uart0::Context) {
+    #[task(binds = SPI1, resources = [shared])]
+    fn spi1(c: spi1::Context) {
         static mut STATE: u32 = 0;
 
-        hprintln!("UART0(STATE = {})", *STATE).unwrap();
+        hprintln!("SPI1(STATE = {})", *STATE).unwrap();
 
-        // second argument has type `resources::shared`
+        // 第２引数は型`resources::shared`を持つ
         advance(STATE, c.resources.shared);
 
-        rtic::pend(Interrupt::UART1);
+        rtic::pend(Interrupt::SPI2);
 
         debug::exit(debug::EXIT_SUCCESS);
     }
 
-    #[task(binds = UART1, priority = 2, resources = [shared])]
-    fn uart1(c: uart1::Context) {
+    #[task(binds = SPI2, priority = 2, resources = [shared])]
+    fn spi2(c: spi2::Context) {
         static mut STATE: u32 = 0;
 
-        hprintln!("UART1(STATE = {})", *STATE).unwrap();
+        hprintln!("SPI2(STATE = {})", *STATE).unwrap();
 
-        // just to show that `shared` can be accessed directly
+        // `shared`に直接アクセスできることを示すだけ
         *c.resources.shared += 0;
 
-        // second argument has type `Exclusive<u32>`
+        // 第2引数は型`Exclusive<u32>`を持つ
         advance(STATE, Exclusive(c.resources.shared));
     }
 };
 
-// the second parameter is generic: it can be any type that implements the `Mutex` trait
+// 第2パラメタはジェネリクス: `Mutex`トレイトを実装している任意のタイプを受け付ける
 fn advance(state: &mut u32, mut shared: impl Mutex<T = u32>) {
     *state += 1;
 
