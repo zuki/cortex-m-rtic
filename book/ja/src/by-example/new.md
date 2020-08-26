@@ -1,34 +1,30 @@
-# Starting a new project
+# 新たなプロジェクトを開始する
 
-Now that you have learned about the main features of the RTIC framework you can
-try it out on your hardware by following these instructions.
+RTICフレームワークの主な機能について学びました。では、以下の手順に沿って
+お手持ちのハードウェア上で試してみましょう。
 
-1. Instantiate the [`cortex-m-quickstart`] template.
+1. [`cortex-m-quickstart`]テンプレートをインスタンス化します。
 
 [`cortex-m-quickstart`]: https://github.com/rust-embedded/cortex-m-quickstart#cortex-m-quickstart
 
 ``` console
-$ # for example using `cargo-generate`
+$ # たとえば、`cargo-generate`を使用します。
 $ cargo generate \
     --git https://github.com/rust-embedded/cortex-m-quickstart \
     --name app
 
-$ # follow the rest of the instructions
+$ # 以下の手順に従がいます。
 ```
 
-2. Add a peripheral access crate (PAC) that was generated using [`svd2rust`]
-   **v0.14.x**, or a board support crate that depends on one such PAC as a
-   dependency. Make sure that the `rt` feature of the crate is enabled.
+1. [`svd2rust`] **v0.14.x**を使って生成されたペリフェラルアクセスクレート（PAC）、 または、そのようなPACに依存するボードサポートクレートを追加します。クレートの`rt`機能を必ず有効にしてください。
 
 [`svd2rust`]: https://crates.io/crates/svd2rust
 
-In this example, I'll use the [`lm3s6965`] device crate. This device crate
-doesn't have an `rt` Cargo feature; that feature is always enabled.
+この例では[`lm3s6965`]デバイスクレートを使用します。このデバイスクレートには`rt` Cargo featureはありません。この機能は常に有効になっています。
 
 [`lm3s6965`]: https://crates.io/crates/lm3s6965
 
-This device crate provides a linker script with the memory layout of the target
-device so `memory.x` and `build.rs` need to be removed.
+このデバイスクレートはターゲットデバイスのメモリレイアウトを指定したリンカースクリプトを提供しているので、`memory.x`と`build.rs`を削除する必要があります。
 
 ``` console
 $ cargo add lm3s6965 --vers 0.1.3
@@ -36,15 +32,15 @@ $ cargo add lm3s6965 --vers 0.1.3
 $ rm memory.x build.rs
 ```
 
-3. Add the `cortex-m-rtic` crate as a dependency.
+3. 依存クレートに `cortex-m-rtic` クレートを追加します。
 
 ``` console
 $ cargo add cortex-m-rtic --allow-prerelease
 ```
 
-4. Write your RTIC application.
+4. RTICアプリケーションを書きます。
 
-Here I'll use the `init` example from the `cortex-m-rtic` crate.
+ここでは、`cortex-m-rtic`クレートの`init`サンプルを使用します。
 
 ``` console
 $ curl \
@@ -52,15 +48,15 @@ $ curl \
     > src/main.rs
 ```
 
-That example depends on the `panic-semihosting` crate:
+この例は`panic-semihosting`クレートに依存しています。
 
 ``` console
 $ cargo add panic-semihosting
 ```
 
-5. Build it, flash it and run it.
+5. プログラムをビルトし、書き込んで実行します。
 
 ``` console
-$ # NOTE: I have uncommented the `runner` option in `.cargo/config`
+$ # 注意: `.cargo/config`の`runner`オプションのコメントを外しました。
 $ cargo run
 {{#include ../../../../ci/expected/init.run}}```
