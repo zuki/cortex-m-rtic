@@ -6,13 +6,13 @@
 #![no_std]
 
 use cortex_m_semihosting::hprintln;
-use lm3s6965::Interrupt;
+use stm32f4::stm32f407::Interrupt;
 use panic_semihosting as _;
 
-#[rtic::app(device = lm3s6965)]
+#[rtic::app(device = stm32f4::stm32f407)]
 const APP: () = {
     struct Resources {
-        // Some resources to work with
+        // 使用するいくつかのリソース
         #[init(0)]
         a: u32,
         #[init(0)]
@@ -23,25 +23,25 @@ const APP: () = {
 
     #[init]
     fn init(_: init::Context) {
-        rtic::pend(Interrupt::UART0);
-        rtic::pend(Interrupt::UART1);
+        rtic::pend(Interrupt::SPI1);
+        rtic::pend(Interrupt::SPI2);
     }
 
-    // Direct destructure
-    #[task(binds = UART0, resources = [a, b, c])]
-    fn uart0(cx: uart0::Context) {
+    // 直接構造体を分割
+    #[task(binds = SPI1, resources = [a, b, c])]
+    fn spi1(cx: spi1::Context) {
         let a = cx.resources.a;
         let b = cx.resources.b;
         let c = cx.resources.c;
 
-        hprintln!("UART0: a = {}, b = {}, c = {}", a, b, c).unwrap();
+        hprintln!("SPI1: a = {}, b = {}, c = {}", a, b, c).unwrap();
     }
 
-    // De-structure-ing syntax
-    #[task(binds = UART1, resources = [a, b, c])]
-    fn uart1(cx: uart1::Context) {
-        let uart1::Resources { a, b, c } = cx.resources;
+    // 構造体分割構文
+    #[task(binds = SPI2, resources = [a, b, c])]
+    fn spi2(cx: spi2::Context) {
+        let spi2::Resources { a, b, c } = cx.resources;
 
-        hprintln!("UART0: a = {}, b = {}, c = {}", a, b, c).unwrap();
+        hprintln!("SPI2: a = {}, b = {}, c = {}", a, b, c).unwrap();
     }
 };
