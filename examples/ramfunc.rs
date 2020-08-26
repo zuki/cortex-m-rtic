@@ -8,7 +8,7 @@
 use cortex_m_semihosting::{debug, hprintln};
 use panic_semihosting as _;
 
-#[rtic::app(device = lm3s6965)]
+#[rtic::app(device = stm32f4::stm32f407)]
 const APP: () = {
     #[init(spawn = [bar])]
     fn init(c: init::Context) {
@@ -23,7 +23,7 @@ const APP: () = {
         debug::exit(debug::EXIT_SUCCESS);
     }
 
-    // run this task from RAM
+    // このタスクをRAMから実行
     #[inline(never)]
     #[link_section = ".data.bar"]
     #[task(priority = 2, spawn = [foo])]
@@ -32,10 +32,10 @@ const APP: () = {
     }
 
     extern "C" {
-        fn UART0();
+        fn SPI1();
 
-        // run the task dispatcher from RAM
-        #[link_section = ".data.UART1"]
-        fn UART1();
+        // RAMからタスクディスパッチャを実行
+        #[link_section = ".data.SPI2"]
+        fn SPI2();
     }
 };
